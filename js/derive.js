@@ -40,12 +40,12 @@ function timeline(sc,years){
   const list=sc.list,months=12*years;
   const T=list.length?list[0].k.t:null;
   const k=Math.max(0,Math.round(+((list[0]||{k:{flat:{fix:{}}}}).k.flat.fix.months)||0));
-  const s2=list.find(s=>s.id===2);
+  const sRent=list.find(s=>s.key==='rent');
   const monthlyOf=s=>{
     const after=s.free;
     let before=after;
-    if(s.id===3&&s2)before=s2.free;
-    if(s.id===4)before=sc.today.freeNow;
+    if(s.key==='rentRefix'&&sRent)before=sRent.free;
+    if(s.key==='stayRefix')before=sc.today.freeNow;
     return {before,after};
   };
   const xs=[0];
@@ -54,7 +54,7 @@ function timeline(sc,years){
   xs.sort((a,b)=>a-b);
   const cumAt=(m,mo)=>{const b=Math.min(m,k),a=Math.max(0,m-k);return mo.before*b+mo.after*a;};
   const mk=(id,name,mo)=>({id,name,monthly:mo,pts:xs.map(x=>[x,cumAt(x,mo)]),yearEnd:Array.from({length:years},(_,i)=>cumAt(12*(i+1),mo))});
-  const series=list.map(s=>mk(s.id,'Scénář '+s.id,monthlyOf(s)));
+  const series=list.map(s=>mk(s.key,'Scénář '+s.n,monthlyOf(s)));
   const base=mk(0,'Dnes',{before:sc.today.freeNow,after:sc.today.freeNow});
   return {series,base,xs,k:k>0&&k<months?k:null,months,years};
 }
@@ -92,18 +92,22 @@ function scenarios(c,vi){
   const v=base.variants[vi]||base.variants[0];
   const out=[];
   const T0=compute(base).T;
-  const mk=(id,title,mod)=>{
+  const mk=(key,title,mod)=>{
     const k=clone(base);k.variants=v?[v]:[];mod(k);
-    const r=compute(k);return {id,title,k,r,v:r.V[0]||null};
+    const r=compute(k);return {key,id:key,title,k,r,v:r.V[0]||null};
   };
   // dnešek = dnešní splátka, bez koupě
   const today=(()=>{const k=clone(base);k.variants=[];k.t.buy=false;k.t.sell=false;k.t.rent=false;k.useRefix=false;return compute(k);})();
-  if(T0.flat&&T0.buy&&v){
-    out.push(mk(1,'Prodat a koupit',k=>{k.t.sell=true;k.t.rent=false;}));
-    out.push(mk(2,T0.mort?'Pronajímat a koupit':'Ponechat a koupit',k=>{k.t.sell=false;k.t.rent=true;k.useRefix=false;}));
-    if(T0.fix)out.push(mk(3,'Refinancovat, pronajímat a koupit',k=>{k.t.sell=false;k.t.rent=true;k.useRefix=true;}));
+  if(T0.flat){
+    out.push(mk('stay','Zůstat',k=>{k.t.buy=false;k.t.sell=false;k.t.rent=false;k.useRefix=false;}));
+    if(T0.fix)out.push(mk('stayRefix','Zůstat po refinancování',k=>{k.t.buy=false;k.t.sell=false;k.t.rent=false;k.useRefix=true;}));
   }
-  if(T0.fix)out.push(mk(4,'Zůstat a jen refinancovat',k=>{k.t.buy=false;k.t.sell=false;k.t.rent=false;k.useRefix=true;}));
+  if(T0.flat&&T0.buy&&v){
+    out.push(mk('sell','Prodat a koupit nový',k=>{k.t.sell=true;k.t.rent=false;}));
+    out.push(mk('rent','Pronajímat a koupit nový',k=>{k.t.sell=false;k.t.rent=true;k.useRefix=false;}));
+    if(T0.fix)out.push(mk('rentRefix','Pronajímat po refinancování a koupit nový',k=>{k.t.sell=false;k.t.rent=true;k.useRefix=true;}));
+  }
+  out.forEach((s,i)=>{s.n=i+1;});
   out.forEach(s=>{
     const r=s.r,x=s.v,f=s.k.flat,m=f.mort;
     if(x){s.free=x.free;s.total=x.total;s.parts=[['Splátka nového bytu',x.pmt,'pmt'],['Pojištění',x.ins,'ins'],['Provoz nového bytu',x.ops,'ops']];if(r.T.flat&&!r.T.sell)s.parts.push(['Starý byt po odečtu nájmu',x.old,'old']);
@@ -122,11 +126,12 @@ function scenarios(c,vi){
 }
 function scenarioText(s,c,r){
   const f=c.flat,m=f.mort;
-  switch(s.id){
-    case 1:return 'Starý byt se prodá, čistý výtěžek jde do nového bytu.';
-    case 2:return r.T.mort?'Starý byt se pronajme, hypotéka běží dál za dnešních '+fmtPct(m.rate)+' %.':'Starý byt se pronajme a zůstává ve vlastnictví.';
-    case 3:return 'Jako vedle, ale po konci fixace za '+(+f.fix.months||0)+' '+pl(+f.fix.months||0,'měsíc','měsíce','měsíců')+' se splátka přepočítá na '+fmtPct(f.fix.rate)+' %.';
-    default:return 'Bez stěhování. Po konci fixace nová sazba '+fmtPct(f.fix.rate)+' %.';
+  switch(s.key){
+    case 'stay':return r.T.mort?'Beze změny. Hypotéka běží dál za dnešních '+fmtPct(m.rate)+' %, byt zůstává klientovi.':'Beze změny, nic se neprodává ani nekupuje.';
+    case 'stayRefix':return 'Bez stěhování. Po konci fixace za '+(+f.fix.months||0)+' '+pl(+f.fix.months||0,'měsíc','měsíce','měsíců')+' nová sazba '+fmtPct(f.fix.rate)+' %.';
+    case 'sell':return 'Starý byt se prodá, čistý výtěžek jde do nového bytu.';
+    case 'rent':return r.T.mort?'Starý byt se pronajme, hypotéka běží dál za dnešních '+fmtPct(m.rate)+' %.':'Starý byt se pronajme a zůstává ve vlastnictví.';
+    default:return 'Jako vedle, ale po konci fixace za '+(+f.fix.months||0)+' '+pl(+f.fix.months||0,'měsíc','měsíce','měsíců')+' se splátka přepočítá na '+fmtPct(f.fix.rate)+' %.';
   }
 }
 const fmtPct=n=>KB.NF2.format(+n||0);

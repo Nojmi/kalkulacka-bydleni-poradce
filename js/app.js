@@ -380,8 +380,8 @@ function viewScenare(c,r){
     const w=s.total/mxTot*100;
     const pills=[s.ltv!=null?tag('LTV '+pct(s.ltv),s.ltv>0.9?'r':s.ltv>0.8?'w':''):tag('Bez nové hypotéky'),s.dsti!=null?tag('Splátky '+pct(s.dsti)+' příjmu',s.dsti>0.5?'w':''):''];
     if(s.ltv!=null&&s.ltv>0.8)pills[0]=tag((s.ltv>0.9?'■ ':'▲ ')+'LTV '+pct(s.ltv),s.ltv>0.9?'r':'w');
-    return '<div class="vcard'+cl+'" style="cursor:default"><div class="toprow"><span class="lbl">Scénář '+s.id+'</span>'+(bi.has(i)?'<span class="pill a">◆ Nejvíc zbude</span>':'')+'</div>'
-      +'<div><div class="ttl">'+s.title+'</div><div class="mut" style="font-size:13.5px;margin-top:4px;min-height:40px">'+esc(D.scenarioText(s,c,s.r))+'</div></div>'
+    return '<div class="vcard'+cl+'" style="cursor:default"><div class="toprow"><span class="lbl">Scénář '+s.n+'</span>'+(bi.has(i)?'<span class="pill a">◆ Nejvíc zbude</span>':'')+'</div>'
+      +'<div><div class="ttl" style="min-height:52px">'+s.title+'</div><div class="mut" style="font-size:13.5px;margin-top:4px;min-height:40px">'+esc(D.scenarioText(s,c,s.r))+'</div></div>'
       +'<div><div class="mut" style="font-size:14px">Zbude měsíčně</div><div class="big'+(s.free<0?' neg':'')+'" style="font-size:38px;'+(bi.has(i)?'color:var(--accd)':s.free<0?'color:var(--risk)':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free)+'</div><div class="mut" style="font-size:13.5px;margin-top:2px">'+kcd(s.free-todayFree)+' proti dnešku</div><div class="yr"><span>Ročně zbude <small>(12 × měsíčně)</small></span><b class="'+(s.free<0?'neg':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free*12)+'</b></div></div><hr>'
       +'<div class="rowb"><span class="mut" style="font-size:14px">Bydlení měsíčně</span><b style="font-size:20px;font-weight:650">'+kc(s.total)+'</b></div><div style="width:'+w.toFixed(1)+'%">'+stackBar(rows)+'</div>'+legendRows(rows)
       +'<div class="pills" style="margin-top:auto">'+pills.join('')+'</div></div>';
@@ -392,19 +392,19 @@ function viewScenare(c,r){
     ['Zbylé úspory',s=>s.rows.savLeft,'max',kc],
     ['Dluh celkem',s=>s.rows.debt,'min',kc],
     ['Nemovitosti − dluhy',s=>s.rows.net,'max',kc]];
-  let tb='<table class="tbl"><thead><tr><th><span class="mut4" style="font-weight:500">Majetek a závazky</span></th>'+list.map(s=>'<th><small>Scénář '+s.id+'</small></th>').join('')+'</tr></thead><tbody>';
+  let tb='<table class="tbl"><thead><tr><th><span class="mut4" style="font-weight:500">Majetek a závazky</span></th>'+list.map(s=>'<th><small>Scénář '+s.n+'</small></th>').join('')+'</tr></thead><tbody>';
   rowsDef.forEach(rw=>{
     if(rw[0]==='Stávající hypotéka'){tb+='<tr><td>'+rw[0]+'</td>'+list.map(s=>{const o=s.rows.oldMort;return '<td>'+(o==null?'—':typeof o==='string'?o:kc(o.bal)+' · '+NF2.format(o.rate)+' %')+'</td>';}).join('')+'</tr>';return;}
     const vals=list.map(rw[1]);const bs=rw[2]?D.bestSet(vals,rw[2]):new Set();
     tb+='<tr><td>'+rw[0]+'</td>'+vals.map((v,i)=>'<td>'+(bs.has(i)?'<span class="bv">'+rw[3](v)+'</span>':rw[3](v))+'</td>').join('')+'</tr>';
   });
-  tb+='</tbody></table><p class="mut4" style="font-size:12.5px;padding:10px 24px 16px;border-top:1px solid var(--row)">Nemovitosti podle odhadní a kupní ceny, bez rekonstrukce. Scénáře 1–3 počítají s novým bytem '+esc(sc.variant.name)+'.</p>';
+  tb+='</tbody></table><p class="mut4" style="font-size:12.5px;padding:10px 24px 16px;border-top:1px solid var(--row)">Nemovitosti podle odhadní a kupní ceny, bez rekonstrukce. Scénáře s koupí počítají s novým bytem '+esc(sc.variant.name)+'.</p>';
   const yrs=UI.scenYears||5,tl=D.timeline(sc,yrs);
-  const SC={1:['#0072B2','d'],2:['#E69F00','t'],3:['#CC79A7','s'],4:['#009E73','v']};
-  const tlSeries=tl.series.map(x=>({label:x.name,color:SC[x.id][0],shape:SC[x.id][1],pts:x.pts})).concat([{label:'Dnes',color:'#8c939d',dash:true,pts:tl.base.pts}]);
-  const tlGraf='<div class="mut" style="font-size:13px;margin:4px 0 6px">Součet toho, co klientovi po všech výdajích zbyde. Do konce fixace platí dnešní splátka, potom podle scénáře. Čárkovaně dnešní stav beze změny.</div>'+Charts.lines({width:1700,height:250,months:tl.months,years:yrs,series:tlSeries,mark:tl.k?{x:tl.k,label:'konec fixace'}:null});
-  const tlTab='<div class="twrap"><table class="tbl sm"><thead><tr><th></th>'+tl.series.map(x=>'<th>'+x.name+'</th>').join('')+'<th>Dnes</th></tr></thead><tbody><tr><td>Měsíčně (po fixaci)</td>'+tl.series.map(x=>'<td>'+kc(x.monthly.after)+'</td>').join('')+'<td>'+kc(tl.base.monthly.after)+'</td></tr>'
-    +Array.from({length:yrs},(_,i)=>'<tr><td>Za '+(i+1)+' '+(i===0?'rok':i<4?'roky':'let')+'</td>'+tl.series.map(x=>'<td>'+kc(x.yearEnd[i])+'</td>').join('')+'<td>'+kc(tl.base.yearEnd[i])+'</td></tr>').join('')+'</tbody></table></div>';
+  const SC={stay:['#56B4E9','c'],stayRefix:['#0072B2','d'],sell:['#009E73','t'],rent:['#E69F00','s'],rentRefix:['#CC79A7','v']};
+  const tlSeries=tl.series.map(x=>({label:x.name,color:SC[x.id][0],shape:SC[x.id][1],pts:x.pts}));
+  const tlGraf='<div class="mut" style="font-size:13px;margin:4px 0 6px">Součet toho, co klientovi po všech výdajích zbyde. Do konce fixace platí dnešní splátka, potom podle scénáře. Scénář 1 je stav beze změny.</div>'+Charts.lines({width:1700,height:250,months:tl.months,years:yrs,series:tlSeries,mark:tl.k?{x:tl.k,label:'konec fixace'}:null});
+  const tlTab='<div class="twrap"><table class="tbl sm"><thead><tr><th></th>'+tl.series.map(x=>'<th>'+x.name+'</th>').join('')+'</tr></thead><tbody><tr><td>Měsíčně (po fixaci)</td>'+tl.series.map(x=>'<td>'+kc(x.monthly.after)+'</td>').join('')+'</tr>'
+    +Array.from({length:yrs},(_,i)=>'<tr><td>Za '+(i+1)+' '+(i===0?'rok':i<4?'roky':'let')+'</td>'+tl.series.map(x=>'<td>'+kc(x.yearEnd[i])+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
   const tlCard=chartCard('scenTime','Kolik klientovi zbude v čase',tlGraf,tlTab,seg('scenYears',[[3,'3 roky'],[5,'5 let'],[10,'10 let']],yrs));
   return '<div class="page"><div class="head"><div class="t"><span class="eyebrow">'+eb+'</span><h1 class="h1 m" style="font-size:38px">Co udělat se stávajícím bytem</h1></div>'
    +(c.variants.length>1?'<div class="row"><span class="mut" style="font-size:14px">Nový byt</span>'+seg('scenVar',c.variants.map((v,i)=>[i,v.name]),vi,'lg')+'</div>':'')
@@ -497,7 +497,7 @@ function helpSvg(){
   const ins=[['Klient','jméno, poznámka, úspory'],['Příjmy a výdaje','měsíční a roční položky'],['Situace','byt, hypotéka, fixace, prodej / pronájem'],['Stávající byt','hodnota, provoz, hypotéka, nájem nebo prodej'],['Varianty nového bytu','1 až 6: cena, rekonstrukce, úspory, hypotéka']];
   ins.forEach((x,i)=>{g+=box(10,inY[i],360,76,B,x[0],[x[1]]);g+=arr(370,inY[i]+38,450,270,B);});
   g+='<g><rect x="450" y="60" width="330" height="436" rx="18" fill="#f1f7fc" stroke="'+B+'" stroke-width="2"/><text x="474" y="92" font-size="17" font-weight="700" fill="#1f2328">Výpočet v prohlížeči</text>'
-    +['Anuita a měsíční splátka','Zůstatek hypotéky a splátka po refixaci','LTV a poměr splátek k příjmu','Prodej: provize, náklady, daň ze zisku','Pronájem: daň ve variantách A, B, C','Čtyři scénáře co se stávajícím bytem','Kumulativní zbytek v čase'].map((l,i)=>'<text x="474" y="'+(130+i*36)+'" font-size="14" fill="#1f2328">• '+l+'</text>').join('')
+    +['Anuita a měsíční splátka','Zůstatek hypotéky a splátka po refixaci','LTV a poměr splátek k příjmu','Prodej: provize, náklady, daň ze zisku','Pronájem: daň ve variantách A, B, C','Pět scénářů co se stávajícím bytem','Kumulativní zbytek v čase'].map((l,i)=>'<text x="474" y="'+(130+i*36)+'" font-size="14" fill="#1f2328">• '+l+'</text>').join('')
     +'<text x="474" y="410" font-size="13" fill="#5b616b">Výsledky se přepočítají po každém</text><text x="474" y="428" font-size="13" fill="#5b616b">zadaném znaku, tlačítko Spočítat</text><text x="474" y="446" font-size="13" fill="#5b616b">není potřeba. Nic se neodesílá.</text></g>';
   const outs=[['Přehled','nejlepší varianta, Dnes vs. varianty','prehled'],['Scénáře','prodat · pronajímat · refinancovat','scenare'],['Srovnání','tabulka všech variant vedle sebe','srovnani'],['Grafy','splátky, financování, zbytek','grafy'],['Stávající byt','daně, prodej, hypotéka krok za krokem','byt']];
   const outY=[60,150,240,330,420];

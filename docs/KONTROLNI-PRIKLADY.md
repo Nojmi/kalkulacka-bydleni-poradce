@@ -13,7 +13,7 @@ Hodnoty vznikly nezávisle v `docs/overeni-hodnot.py` (Python Decimal) a hlídá
 | Novák – Žižkov 3+1: hypotéka, splátka, LTV | 5 500 000 Kč, 28 823,36 Kč, 79,7 % |
 | Novák – Žižkov 3+1: zbývá měsíčně | 15 283,96 Kč |
 | Novák – Dnes zbývá | 39 025,37 Kč |
-| Scénáře 1 / 2 / 3 / 4 (zbývá) | 41 606,58 / 18 441,01 / 15 283,96 / 35 868,32 Kč |
+| Scénáře v pořadí 1–5: zůstat / zůstat po refinancování / prodat a koupit / pronajímat a koupit / pronajímat po refinancování a koupit (zbývá) | 39 025,37 / 35 868,32 / 41 606,58 / 18 441,01 / 15 283,96 Kč |
 | Výtěžek prodeje Novák / Horák / Jana | 3 574 000 / 6 316 000 / −42 725 Kč |
 | Strop paušálu u pronájmu | 600 000 Kč |
 

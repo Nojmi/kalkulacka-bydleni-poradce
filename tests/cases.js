@@ -32,13 +32,14 @@ t('Jana: záporný výtěžek se do variant nepromítá (výtěžek 0), hypoték
 t('paušál 30 % má strop 600 000 Kč (nájem 4 mil. ročně)',()=>{const c=sample('Nov');c.flat.rent.rent=4e6/12;c.flat.rent.vac=0;const P=KB.compute(c).P;eq(P.expA,600000);});
 
 /* B) scénáře (nový byt Žižkov) */
-t('scénáře Novákovi: zbude 41 606,58 / 18 441,01 / 15 283,96 / 35 868,32',()=>{
-  const sc=D.scenarios(sample('Nov'),0);ok(sc.list.length===4,'počet scénářů '+sc.list.length);
-  [41606.58,18441.01,15283.96,35868.32].forEach((x,i)=>eq(sc.list[i].free,x,'scénář '+(i+1)));});
-t('scénář 1: nová hypotéka 1 926 000, dluh = hypotéka, nemovitosti − dluhy 4 974 000',()=>{const s=D.scenarios(sample('Nov'),0).list[0];eq(s.rows.newMort,1926000);eq(s.rows.debt,1926000);eq(s.rows.net,4974000);});
-t('scénář 2: starý byt po odečtu nájmu 4 205,63; dluh 7 900 000; nemovitosti − dluhy 5 200 000',()=>{const s=D.scenarios(sample('Nov'),0).list[1];eq(s.parts[3][1],4205.63);eq(s.rows.debt,7.9e6);eq(s.rows.net,5.2e6);});
-t('scénář 4 (bez koupě): zbylé úspory 2 600 000, nemovitosti − dluhy 3 800 000',()=>{const s=D.scenarios(sample('Nov'),0).list[3];eq(s.rows.savLeft,2.6e6);eq(s.rows.net,3.8e6);ok(s.rows.newMort===null);});
-t('scénáře: bez konce fixace odpadají 3 a 4',()=>{const c=sample('Nov');c.t.fix=false;const ids=D.scenarios(c,0).list.map(s=>s.id);ok(ids.join()==='1,2',ids.join());});
+t('scénáře Novákovi v pořadí: zůstat 39 025,37 / po refinancování 35 868,32 / prodat 41 606,58 / pronajímat 18 441,01 / pronajímat po refinancování 15 283,96',()=>{
+  const sc=D.scenarios(sample('Nov'),0);ok(sc.list.length===5,'počet scénářů '+sc.list.length);
+  ok(sc.list.map(s=>s.key).join()==='stay,stayRefix,sell,rent,rentRefix','pořadí '+sc.list.map(s=>s.key));
+  [39025.37,35868.32,41606.58,18441.01,15283.96].forEach((x,i)=>eq(sc.list[i].free,x,'scénář '+(i+1)));});
+t('prodat a koupit: nová hypotéka 1 926 000, dluh = hypotéka, nemovitosti − dluhy 4 974 000',()=>{const s=D.scenarios(sample('Nov'),0).list[2];eq(s.rows.newMort,1926000);eq(s.rows.debt,1926000);eq(s.rows.net,4974000);});
+t('pronajímat a koupit: starý byt po odečtu nájmu 4 205,63; dluh 7 900 000; nemovitosti − dluhy 5 200 000',()=>{const s=D.scenarios(sample('Nov'),0).list[3];eq(s.parts[3][1],4205.63);eq(s.rows.debt,7.9e6);eq(s.rows.net,5.2e6);});
+t('zůstat po refinancování (bez koupě): zbylé úspory 2 600 000, nemovitosti − dluhy 3 800 000',()=>{const s=D.scenarios(sample('Nov'),0).list[1];eq(s.rows.savLeft,2.6e6);eq(s.rows.net,3.8e6);});
+t('scénáře: bez konce fixace odpadají varianty po refinancování',()=>{const c=sample('Nov');c.t.fix=false;const ids=D.scenarios(c,0).list.map(s=>s.key);ok(ids.join()==='stay,sell,rent',ids.join());});
 t('scénáře: klient bez bytu žádné nemá',()=>ok(D.scenarios(sample('Petr'),0).list.length===0));
 t('scénáře nemění původního klienta',()=>{const c=sample('Nov'),a=JSON.stringify(c);D.scenarios(c,0);ok(JSON.stringify(c)===a);});
 
@@ -98,11 +99,11 @@ t('vodorovné pruhy: záporná hodnota je šrafovaná a má znak ▼',()=>{const
 
 t('časová osa: kumulace po roce odpovídá měsíčnímu zbytku, po fixaci se mění (Novák)',()=>{
   const sc=D.scenarios(sample('Nov'),0),tl=D.timeline(sc,5),by=id=>tl.series.find(x=>x.id===id);
-  eq(Math.round(by(1).yearEnd[0]*100)/100,Math.round(sc.list[0].free*12*100)/100);
-  const k=tl.k,m3=by(3).monthly,exp=m3.before*Math.min(12,k)+m3.after*Math.max(0,12-k);
-  ok(Math.abs(by(3).yearEnd[0]-exp)<0.01,'scénář 3 po roce');
-  ok(Math.abs(tl.base.yearEnd[4]-sc.today.freeNow*60)<0.01,'Dnes po 5 letech');
-  ok(Math.abs(by(4).monthly.before-sc.today.freeNow)<0.01,'scénář 4 před refixací = dnešní stav');});
+  eq(Math.round(by('sell').yearEnd[0]*100)/100,Math.round(sc.list[2].free*12*100)/100);
+  const k=tl.k,m3=by('rentRefix').monthly,exp=m3.before*Math.min(12,k)+m3.after*Math.max(0,12-k);
+  ok(Math.abs(by('rentRefix').yearEnd[0]-exp)<0.01,'pronajímat po refinancování po roce');
+  ok(Math.abs(by('stay').yearEnd[4]-sc.today.freeNow*60)<0.01,'zůstat po 5 letech = dnešní stav');
+  ok(Math.abs(by('stayRefix').monthly.before-sc.today.freeNow)<0.01,'zůstat po refinancování před refixací = dnešní stav');});
 
 /* H) ukázková data a soukromí */
 t('ukázkoví klienti jsou 5 a prázdný nemá varianty',()=>{const s=KB.samples();ok(s.length===5&&s[4].variants.length===0&&s[1].variants.length===6);});
