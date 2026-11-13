@@ -39,6 +39,14 @@ function fmtField(v,kind){
   if(kind==='pct'||kind==='dec')return NF2.format(v);
   return NF.format(v);
 }
+/* živé oddělování tisíců při psaní: číslice, jedna desetinná čárka, mezery po třech */
+function fmtLive(raw){
+  const t=String(raw).replace(/\./g,',').replace(/[^\d,]/g,'');
+  const i=t.indexOf(',');
+  let ip=i<0?t:t.slice(0,i),dp=i<0?null:t.slice(i+1).replace(/,/g,'');
+  ip=ip.replace(/^0+(?=\d)/,'').replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0');
+  return dp==null?ip:(ip||'0')+','+dp;
+}
 /* pole s číslem: uchovává rozepsaný text při fokusu, formátuje až při opuštění */
 function numInp(path,unit,o){
   o=o||{};
@@ -732,7 +740,7 @@ document.addEventListener('focusin',e=>{
   const f=el.dataset.f,k=el.dataset.k;
   if(k==='text'||f==='homeq'||f==='ddq')return;
   const c=cur(),v=num(getP(c,f));
-  UI.editing={f,raw:v?String(v).replace('.',','):''};
+  UI.editing={f,raw:v?fmtLive(String(v)):''};
   el.value=UI.editing.raw;el.classList.remove('z');
   setTimeout(()=>{try{el.select();}catch(_){}},0);
 });
@@ -752,7 +760,14 @@ document.addEventListener('input',e=>{
   const c=cur();
   if(k==='text'){setP(c,f,el.value);persist(true);render();return;}
   // číslo: držíme rozepsaný text, hodnotu parsujeme při každém znaku
-  const raw=el.value;
+  const before=el.value,pos=el.selectionStart==null?before.length:el.selectionStart;
+  const digits=before.slice(0,pos).replace(/[^\d,.]/g,'').length;
+  const raw=fmtLive(before);
+  if(raw!==before){
+    el.value=raw;let n=0,np=raw.length;
+    if(digits===0)np=0;else for(let i=0;i<raw.length;i++){if(/[\d,]/.test(raw[i])&&++n===digits){np=i+1;break;}}
+    try{el.setSelectionRange(np,np);}catch(_){}
+  }
   UI.editing={f,raw};
   let v=parseNum(raw);
   if(k==='pct'||k==='dec'){v=Math.max(0,v);}
