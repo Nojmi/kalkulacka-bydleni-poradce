@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <title>Kontrolní příklady – kalkulačka bydlení</title>
+  <style>
+    body { font: 14px/1.45 system-ui, sans-serif; margin: 24px; max-width: 1100px; color: #0b0b0b; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: 6px 10px; border-bottom: 1px solid #e1e0d9; text-align: left; }
+    td.n { text-align: right; font-variant-numeric: tabular-nums; }
+    .ok { color: #006300; font-weight: 600; } .bad { color: #d03b3b; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Kontrolní příklady</h1>
+  <p>Očekávané hodnoty jsou spočítané nezávisle na aplikaci (viz <code>docs/KONTROLNI-PRIKLADY.md</code>). Test ověřuje, že kód odpovídá vzorcům, ne že je daňový model právně správně.</p>
+  <p id="sum"></p>
+  <table><thead><tr><th>Příklad</th><th>Očekáváno</th><th>Vyšlo</th><th>Výsledek</th></tr></thead><tbody id="rows"></tbody></table>
+  <script src="../js/calc.js"></script>
+  <script src="cases.js"></script>
+  <script>
+    (function () {
+      const calc = KBP.calc; const rows = document.getElementById('rows'); let ok = 0;
+      const f = (n) => n.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      KBP.cases.forEach((c) => {
+        const got = c.actual(calc); const pass = Math.abs(got - c.expected) <= 0.011; if (pass) ok++;
+        const tr = document.createElement('tr');
+        [[c.name, ''], [f(c.expected), 'n'], [f(got), 'n'], [pass ? 'OK' : 'CHYBA', pass ? 'ok' : 'bad']].forEach(([t, cls]) => { const td = document.createElement('td'); td.textContent = t; td.className = cls; tr.appendChild(td); });
+        rows.appendChild(tr);
+      });
+      document.getElementById('sum').textContent = ok + ' z ' + KBP.cases.length + ' příkladů sedí.';
+    })();
+  </script>
+</body>
+</html>
