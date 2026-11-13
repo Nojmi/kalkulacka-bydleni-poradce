@@ -381,7 +381,7 @@ function viewScenare(c,r){
     if(s.ltv!=null&&s.ltv>0.8)pills[0]=tag((s.ltv>0.9?'■ ':'▲ ')+'LTV '+pct(s.ltv),s.ltv>0.9?'r':'w');
     return '<div class="vcard'+cl+'" style="cursor:default"><div class="toprow"><span class="lbl">Scénář '+s.id+'</span>'+(bi.has(i)?'<span class="pill a">◆ Nejvíc zbude</span>':'')+'</div>'
       +'<div><div class="ttl">'+s.title+'</div><div class="mut" style="font-size:13.5px;margin-top:4px;min-height:40px">'+esc(D.scenarioText(s,c,s.r))+'</div></div>'
-      +'<div><div class="mut" style="font-size:14px">Zbude měsíčně</div><div class="big'+(s.free<0?' neg':'')+'" style="font-size:38px;'+(bi.has(i)?'color:var(--accd)':s.free<0?'color:var(--risk)':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free)+'</div><div class="mut" style="font-size:13.5px;margin-top:2px">'+kcd(s.free-todayFree)+' proti dnešku</div></div><hr>'
+      +'<div><div class="mut" style="font-size:14px">Zbude měsíčně</div><div class="big'+(s.free<0?' neg':'')+'" style="font-size:38px;'+(bi.has(i)?'color:var(--accd)':s.free<0?'color:var(--risk)':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free)+'</div><div class="mut" style="font-size:13.5px;margin-top:2px">'+kcd(s.free-todayFree)+' proti dnešku</div><div class="yr"><span>Ročně zbude <small>(12 × měsíčně)</small></span><b class="'+(s.free<0?'neg':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free*12)+'</b></div></div><hr>'
       +'<div class="rowb"><span class="mut" style="font-size:14px">Bydlení měsíčně</span><b style="font-size:20px;font-weight:650">'+kc(s.total)+'</b></div><div style="width:'+w.toFixed(1)+'%">'+stackBar(rows)+'</div>'+legendRows(rows)
       +'<div class="pills" style="margin-top:auto">'+pills.join('')+'</div></div>';
   }).join('');
@@ -398,10 +398,17 @@ function viewScenare(c,r){
     tb+='<tr><td>'+rw[0]+'</td>'+vals.map((v,i)=>'<td>'+(bs.has(i)?'<span class="bv">'+rw[3](v)+'</span>':rw[3](v))+'</td>').join('')+'</tr>';
   });
   tb+='</tbody></table><p class="mut4" style="font-size:12.5px;padding:10px 24px 16px;border-top:1px solid var(--row)">Nemovitosti podle odhadní a kupní ceny, bez rekonstrukce. Scénáře 1–3 počítají s novým bytem '+esc(sc.variant.name)+'.</p>';
+  const yrs=UI.scenYears||5,tl=D.timeline(sc,yrs);
+  const SC={1:['#0072B2','d'],2:['#E69F00','t'],3:['#CC79A7','s'],4:['#009E73','v']};
+  const tlSeries=tl.series.map(x=>({label:x.name,color:SC[x.id][0],shape:SC[x.id][1],pts:x.pts})).concat([{label:'Dnes',color:'#8c939d',dash:true,pts:tl.base.pts}]);
+  const tlGraf='<div class="mut" style="font-size:13px;margin:4px 0 6px">Součet toho, co klientovi po všech výdajích zbyde. Do konce fixace platí dnešní splátka, potom podle scénáře. Čárkovaně dnešní stav beze změny.</div>'+Charts.lines({width:1700,height:250,months:tl.months,years:yrs,series:tlSeries,mark:tl.k?{x:tl.k,label:'konec fixace'}:null});
+  const tlTab='<div class="twrap"><table class="tbl sm"><thead><tr><th></th>'+tl.series.map(x=>'<th>'+x.name+'</th>').join('')+'<th>Dnes</th></tr></thead><tbody><tr><td>Měsíčně (po fixaci)</td>'+tl.series.map(x=>'<td>'+kc(x.monthly.after)+'</td>').join('')+'<td>'+kc(tl.base.monthly.after)+'</td></tr>'
+    +Array.from({length:yrs},(_,i)=>'<tr><td>Za '+(i+1)+' '+(i===0?'rok':i<4?'roky':'let')+'</td>'+tl.series.map(x=>'<td>'+kc(x.yearEnd[i])+'</td>').join('')+'<td>'+kc(tl.base.yearEnd[i])+'</td></tr>').join('')+'</tbody></table></div>';
+  const tlCard=chartCard('scenTime','Kolik klientovi zbude v čase',tlGraf,tlTab,seg('scenYears',[[3,'3 roky'],[5,'5 let'],[10,'10 let']],yrs));
   return '<div class="page"><div class="head"><div class="t"><span class="eyebrow">'+eb+'</span><h1 class="h1 m" style="font-size:38px">Co udělat se stávajícím bytem</h1></div>'
    +(c.variants.length>1?'<div class="row"><span class="mut" style="font-size:14px">Nový byt</span>'+seg('scenVar',c.variants.map((v,i)=>[i,v.name]),vi,'lg')+'</div>':'')
    +'<div class="tile" style="background:var(--dnes);text-align:right;padding:12px 20px"><small>Dnes zbývá</small><b>'+kc(todayFree)+'</b></div></div>'
-   +'<div class="cards" style="grid-template-columns:repeat('+list.length+',minmax(0,1fr))">'+cards+'</div><div class="card" style="padding:0">'+tb+'</div></div>';
+   +tlCard+'<div class="cards" style="grid-template-columns:repeat('+list.length+',minmax(0,1fr))">'+cards+'</div><div class="card" style="padding:0">'+tb+'</div></div>';
 }
 
 /* ---------- stávající byt ---------- */
@@ -682,6 +689,7 @@ A.presTab=t=>{UI.presTab=t.dataset.v;};
 A.srovMain=t=>{UI.srovMain=t.dataset.v==='main';};
 A.chartMode=t=>{UI.charts[t.dataset.key]=t.dataset.v;};
 A.grafVar=t=>{UI.grafVar=+t.dataset.v;};
+A.scenYears=t=>{UI.scenYears=+t.dataset.v;};
 A.scenVar=t=>{UI.scenVar=+t.dataset.v;};
 A.collapse=t=>{const k=t.dataset.key;UI.collapsed[k]=!UI.collapsed[k];};
 A.closePanel=()=>{UI.panel.open=false;};

@@ -33,6 +33,31 @@ function eyebrowSituation(c,r){
   if(T.rent)return 'stěhování, stávající byt k pronájmu';
   return 'stěhování, stávající byt zůstává';
 }
+
+/* Kumulativní „kolik zbude“ v čase. Do konce fixace platí dnešní splátka, potom podle scénáře.
+   Scénář 1 a 2 jsou konstantní (prodej splatí hypotéku; scénář 2 podle zadání počítá s dnešní sazbou). */
+function timeline(sc,years){
+  const list=sc.list,months=12*years;
+  const T=list.length?list[0].k.t:null;
+  const k=Math.max(0,Math.round(+((list[0]||{k:{flat:{fix:{}}}}).k.flat.fix.months)||0));
+  const s2=list.find(s=>s.id===2);
+  const monthlyOf=s=>{
+    const after=s.free;
+    let before=after;
+    if(s.id===3&&s2)before=s2.free;
+    if(s.id===4)before=sc.today.freeNow;
+    return {before,after};
+  };
+  const xs=[0];
+  if(k>0&&k<months)xs.push(k);
+  for(let y=1;y<=years;y++)xs.push(12*y);
+  xs.sort((a,b)=>a-b);
+  const cumAt=(m,mo)=>{const b=Math.min(m,k),a=Math.max(0,m-k);return mo.before*b+mo.after*a;};
+  const mk=(id,name,mo)=>({id,name,monthly:mo,pts:xs.map(x=>[x,cumAt(x,mo)]),yearEnd:Array.from({length:years},(_,i)=>cumAt(12*(i+1),mo))});
+  const series=list.map(s=>mk(s.id,'Scénář '+s.id,monthlyOf(s)));
+  const base=mk(0,'Dnes',{before:sc.today.freeNow,after:sc.today.freeNow});
+  return {series,base,xs,k:k>0&&k<months?k:null,months,years};
+}
 function isEmpty(c,r){
   r=r||compute(c);
   return r.income<=0&&!c.variants.some(v=>(+v.price||0)>0)&&!c.t.flat;
@@ -111,5 +136,5 @@ function nearestFix(clients){
   clients.forEach(c=>{const r=compute(c);if(r.T.fix&&(+c.flat.fix.months||0)>0){const m=+c.flat.fix.months;if(!best||m<best.months)best={months:m,name:c.name,delta:r.pmtFix-r.pmtNow};}});
   return best;
 }
-return {bestSet,initials,situation,eyebrowSituation,isEmpty,counts,varWarn,summary,scenarios,scenarioText,nearestFix,fmtPct,clone};
+return {timeline,bestSet,initials,situation,eyebrowSituation,isEmpty,counts,varWarn,summary,scenarios,scenarioText,nearestFix,fmtPct,clone};
 });

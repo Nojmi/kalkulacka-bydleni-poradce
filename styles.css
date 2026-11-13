@@ -372,3 +372,6 @@ body.pres .note{height:44px;font-size:15px;justify-content:center}
 .wiz .wvars{margin:0 auto;width:100%;max-width:820px}
 .wiz .head{align-items:flex-end;justify-content:space-between}
 .page.cap{max-width:1480px;margin:0 auto;width:100%}
+
+.yr{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:14px;color:var(--ink2)}
+.yr small{color:var(--ink3);font-size:12px}.yr b{font-size:18px;font-variant-numeric:tabular-nums;color:var(--ink)}.yr b.neg{color:var(--risk)}

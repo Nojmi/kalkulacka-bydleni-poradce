@@ -102,5 +102,39 @@ function hbars(rows,o){
   });
   return h+'</div>';
 }
-return {esc,COL,sankey,flowTable,stackedCols,hbars};
+
+/* ---------- spojnicový graf v čase ----------
+ o:{width,height,months,years,series:[{label,color,shape,pts:[[m,v]],dash?}],mark:{x,label}} ; značky ◆ ▲ ■ ▼ na konci roků, bez čísel na každém bodě */
+function niceStep(raw){const e=Math.pow(10,Math.floor(Math.log10(raw||1))),f=raw/e;return (f<=1?1:f<=2?2:f<=5?5:10)*e;}
+function fmtY(v){const a=Math.abs(v);if(a>=1e6)return (v<0?'−':'')+(Math.round(a/1e5)/10).toString().replace('.',',')+' mil.';if(a>=1e3)return (v<0?'−':'')+Math.round(a/1e3)+' tis.';return String(Math.round(v));}
+function shapeAt(sh,x,y,col,r){
+  r=r||5.5;
+  if(sh==='d')return '<polygon points="'+x+','+(y-r-1)+' '+(x+r+1)+','+y+' '+x+','+(y+r+1)+' '+(x-r-1)+','+y+'" fill="'+col+'" stroke="#fff" stroke-width="1.5"/>';
+  if(sh==='t')return '<polygon points="'+x+','+(y-r-1)+' '+(x+r+1)+','+(y+r)+' '+(x-r-1)+','+(y+r)+'" fill="'+col+'" stroke="#fff" stroke-width="1.5"/>';
+  if(sh==='s')return '<rect x="'+(x-r)+'" y="'+(y-r)+'" width="'+(2*r)+'" height="'+(2*r)+'" fill="'+col+'" stroke="#fff" stroke-width="1.5"/>';
+  if(sh==='v')return '<polygon points="'+(x-r-1)+','+(y-r)+' '+(x+r+1)+','+(y-r)+' '+x+','+(y+r+1)+'" fill="'+col+'" stroke="#fff" stroke-width="1.5"/>';
+  return '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+col+'" stroke="#fff" stroke-width="1.5"/>';
+}
+function lines(o){
+  const W=o.width||1700,H=o.height||260,ml=74,mr=190,mt=14,mb=34;
+  const all=[];o.series.forEach(s=>s.pts.forEach(p=>all.push(p[1])));
+  let mn=Math.min(0,...all),mx=Math.max(1,...all);
+  const step=niceStep((mx-mn)/4);mn=Math.floor(mn/step)*step;mx=Math.ceil(mx/step)*step;
+  const X=m=>ml+(W-ml-mr)*m/o.months,Y=v=>mt+(H-mt-mb)*(1-(v-mn)/(mx-mn||1));
+  let g='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Kumulativní částka, která klientovi zbude, podle scénářů" style="display:block;max-width:100%">';
+  for(let v=mn;v<=mx+1e-6;v+=step){g+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="'+(Math.abs(v)<1e-6?'#9aa1ab':'#e6e8ec')+'" stroke-width="'+(Math.abs(v)<1e-6?1.4:1)+'"/><text x="'+(ml-10)+'" y="'+(Y(v)+4)+'" text-anchor="end" font-size="12" fill="#6b7280">'+fmtY(v)+'</text>';}
+  for(let y=0;y<=o.years;y++){g+='<text x="'+X(12*y)+'" y="'+(H-10)+'" text-anchor="middle" font-size="12" fill="#6b7280">'+(y===0?'dnes':y+(y===1?' rok':y<5?' roky':' let'))+'</text>';}
+  if(o.mark){g+='<line x1="'+X(o.mark.x)+'" x2="'+X(o.mark.x)+'" y1="'+mt+'" y2="'+(H-mb)+'" stroke="#9aa1ab" stroke-dasharray="4 4"/><text x="'+(X(o.mark.x)+6)+'" y="'+(mt+12)+'" font-size="12" fill="#4b5563">'+esc(o.mark.label)+'</text>';}
+  const ends=[];
+  o.series.forEach(s=>{
+    const d=s.pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+    g+='<path d="'+d+'" fill="none" stroke="'+s.color+'" stroke-width="'+(s.dash?2:3)+'"'+(s.dash?' stroke-dasharray="7 5"':'')+' stroke-linejoin="round"/>';
+    if(!s.dash)s.pts.filter(p=>p[0]>0&&p[0]%12===0).forEach(p=>{g+=shapeAt(s.shape,+X(p[0]).toFixed(1),+Y(p[1]).toFixed(1),s.color);});
+    const e=s.pts[s.pts.length-1];ends.push({y:Y(e[1]),s,v:e[1]});
+  });
+  ends.sort((a,b)=>a.y-b.y);for(let i=1;i<ends.length;i++)if(ends[i].y-ends[i-1].y<16)ends[i].y=ends[i-1].y+16;
+  ends.forEach(e=>{g+='<text x="'+(W-mr+14)+'" y="'+(e.y+4)+'" font-size="13" fill="#1f2328"><tspan font-weight="650">'+esc(e.s.label)+'</tspan> '+fmtY(e.v)+'</text>';});
+  return g+'</svg>';
+}
+return {esc,COL,sankey,flowTable,stackedCols,hbars,lines,fmtY};
 });

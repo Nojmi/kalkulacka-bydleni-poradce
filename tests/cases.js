@@ -96,6 +96,14 @@ t('Sankey: toky mají stejnou celkovou šířku vlevo i vpravo, žádné NaN',()
 t('Sankey: šrafovaný uzel „Chybí“ používá vzor, ne jen barvu',()=>{const svg=Charts.sankey({width:600,height:200,ml:80,mr:80,nodes:[{id:'m',col:0,label:'Chybí',hatch:true,neg:true},{id:'t',col:1,label:'Cíl'}],links:[{s:'m',t:'t',v:10,hatch:true}]});ok(/<pattern/.test(svg)&&/url\(#h\d+\)/.test(svg));});
 t('vodorovné pruhy: záporná hodnota je šrafovaná a má znak ▼',()=>{const h=Charts.hbars([{label:'a',v:-5},{label:'b',v:10}]);ok(/class="neg"/.test(h)&&/▼/.test(h));});
 
+t('časová osa: kumulace po roce odpovídá měsíčnímu zbytku, po fixaci se mění (Novák)',()=>{
+  const sc=D.scenarios(sample('Nov'),0),tl=D.timeline(sc,5),by=id=>tl.series.find(x=>x.id===id);
+  eq(Math.round(by(1).yearEnd[0]*100)/100,Math.round(sc.list[0].free*12*100)/100);
+  const k=tl.k,m3=by(3).monthly,exp=m3.before*Math.min(12,k)+m3.after*Math.max(0,12-k);
+  ok(Math.abs(by(3).yearEnd[0]-exp)<0.01,'scénář 3 po roce');
+  ok(Math.abs(tl.base.yearEnd[4]-sc.today.freeNow*60)<0.01,'Dnes po 5 letech');
+  ok(Math.abs(by(4).monthly.before-sc.today.freeNow)<0.01,'scénář 4 před refixací = dnešní stav');});
+
 /* H) ukázková data a soukromí */
 t('ukázkoví klienti jsou 5 a prázdný nemá varianty',()=>{const s=KB.samples();ok(s.length===5&&s[4].variants.length===0&&s[1].variants.length===6);});
 t('v repozitáři nejsou osobní údaje ani cizí služby',()=>{
