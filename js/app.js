@@ -506,15 +506,41 @@ function helpSvg(){
   last.forEach(x=>{g+=box(1200,x[3],290,76,x[2],x[0],[x[1]]);g+=arr(1170,270,1200,x[3]+38,x[2]);});
   return g+'</svg>';
 }
+function helpMap(){
+  const CX=750,CY=320;
+  const br=[
+   {side:'L',y:105,col:'#0072B2',t:'1 · Koho řešíme?',leaf:['Jméno a poznámka','Kolik doma vydělávají','Kolik měsíčně utratí a kolik mají našetřeno']},
+   {side:'L',y:320,col:'#E69F00',t:'2 · Co už mají?',leaf:['Starý byt: kolik asi stojí','Dluh u banky (hypotéka) a úrok','Za jak dlouho končí pevný úrok']},
+   {side:'L',y:535,col:'#CC79A7',t:'3 · Co chtějí koupit?',leaf:['Až 6 bytů ke srovnání','Cena, oprava, kolik si půjčit','Kolik dají z vlastních peněz']},
+   {side:'R',y:105,col:'#009E73',t:'4 · Co se starým bytem?',leaf:['Prodat a peníze dát do nového','Pronajímat a počítat daň z nájmu','Nechat být nebo jen změnit úrok']},
+   {side:'R',y:320,col:'#D55E00',t:'5 · Co z toho vyjde?',leaf:['Kolik měsíčně zbude (a za rok)','Která varianta je nejlepší','Kde hrozí potíže: ■ ▲ upozornění']},
+   {side:'R',y:535,col:'#3b4048',t:'6 · Co dál?',leaf:['Ukázat klientovi bez políček','Uložit do souboru (záloha)','Data zůstávají jen v tomto počítači']}];
+  let g='<svg viewBox="0 0 1500 640" width="100%" role="img" aria-label="Myšlenková mapa aplikace: koho řešíme, co už mají, co chtějí koupit, co se starým bytem, co z toho vyjde a co dál" style="display:block">';
+  br.forEach(b=>{
+    const L=b.side==='L',bx=L?380:910,bw=210,cx=L?bx+bw:bx,ex=L?CX-125:CX+125;
+    g+='<path d="M'+ex+' '+CY+' C'+(ex+(L?-90:90))+' '+CY+' '+(cx+(L?90:-90))+' '+b.y+' '+cx+' '+b.y+'" fill="none" stroke="'+b.col+'" stroke-width="3.5" stroke-linecap="round"/>';
+    b.leaf.forEach((l,i)=>{
+      const ly=b.y-52+i*52,lx=L?10:1150,lw=340,jx=L?bx:bx+bw,tx=L?lx+lw:lx;
+      g+='<path d="M'+jx+' '+b.y+' C'+(jx+(L?-25:25))+' '+b.y+' '+(tx+(L?25:-25))+' '+ly+' '+tx+' '+ly+'" fill="none" stroke="'+b.col+'" stroke-width="2" opacity=".7"/>'
+        +'<rect x="'+lx+'" y="'+(ly-19)+'" width="'+lw+'" height="38" rx="19" fill="#fff" stroke="'+b.col+'" stroke-width="1.6"/><text x="'+(lx+lw/2)+'" y="'+(ly+5)+'" text-anchor="middle" font-size="14" fill="#1f2328">'+l+'</text>';
+    });
+    g+='<rect x="'+bx+'" y="'+(b.y-26)+'" width="'+bw+'" height="52" rx="26" fill="'+b.col+'"/><text x="'+(bx+bw/2)+'" y="'+(b.y+6)+'" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">'+b.t+'</text>';
+  });
+  g+='<ellipse cx="'+CX+'" cy="'+CY+'" rx="135" ry="78" fill="#1f2328"/><text x="'+CX+'" y="'+(CY-12)+'" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">Kalkulačka</text><text x="'+CX+'" y="'+(CY+12)+'" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">bydlení</text><text x="'+CX+'" y="'+(CY+38)+'" text-anchor="middle" font-size="13" fill="#d5d9df">Vyplatí se nový byt?</text>';
+  return g+'</svg>';
+}
 function viewHelp(){
   const svg=helpSvg();
   const steps=[['Založte klienta','Na úvodní obrazovce „+ Nový klient“. Průvodce má čtyři kroky: klient a příjmy, výdaje, situace, varianty. Klient vznikne až na konci.'],['Nastavte situaci','Má klient stávající byt a hypotéku? Končí fixace? Co zamýšlí s bytem? Podle toho se zobrazí jen potřebné formuláře.'],['Zadejte varianty','Až 6 bytů. Stačí cena, ostatní má předvyplněné. Výsledky vidíte ihned v bočním panelu.'],['Začněte Přehledem','Ukáže, která varianta nechá klientovi nejvíc, a porovná ji s dneškem.'],['Projděte Scénáře','Prodat, pronajímat, nebo jen refinancovat. Karty mají i roční součet a graf v čase.'],['Ukažte klientovi','„Prezentovat klientovi“ skryje všechna pole. Pak exportujte JSON jako zálohu.']];
   const where=[['Přehled','Která varianta je nejlepší a jak se liší od dneška','vždy'],['Scénáře','Co se stávajícím bytem: prodat, pronajímat, refinancovat','stávající byt + nový byt + aspoň jedna varianta'],['Srovnání','Všechny varianty v jedné tabulce, nejlepší hodnota označená','vždy'],['Grafy','Splátky, financování, zbytek měsíčně','aspoň jedna varianta'],['Stávající byt','Hodnota, provoz, hypotéka, fixace, daň z pronájmu, prodej','pokud má klient byt'],['Příjmy a výdaje','Společné údaje pro všechny varianty, přepínače situace','vždy']];
   const know=[['Orientační výpočet','Není to nabídka banky. Čísla slouží k rozhovoru, ne ke smlouvě.'],['Fiktivní data','Do aplikace nezadávejte skutečné údaje klientů. Ukázkoví klienti jsou vymyšlení.'],['Daň z pronájmu','Varianty A, B, C jsou zjednodušený, neověřený model.'],['Pojištění hypotéky','Pevná, ručně zadaná částka, ne výpočet z rizik.'],['Značky','◆ nejlepší hodnota, ▲ pozor, ■ riziko, ▼ záporná nebo chybějící. Nikdy jen barva.'],['Data','Jen v tomto prohlížeči. Po smazání dat prohlížeče zmizí, proto zálohujte do JSON.']];
-  return '<div class="page cap"><div class="head"><div class="t"><span class="eyebrow">Nápověda</span><h1 class="h1 m">Jak aplikace funguje</h1><span class="sub">Zadáte údaje, aplikace je hned přepočítá a ukáže v několika pohledech. Schéma vlevo doprava.</span></div></div>'
-   +'<div class="card"><div style="overflow:auto">'+svg+'</div></div>'
+  const gloss=[['Hypotéka','Půjčka od banky na bydlení, splácí se každý měsíc.'],['Splátka','Kolik měsíčně klient zaplatí bance.'],['Úrok (sazba)','Cena půjčených peněz. Čím vyšší, tím dražší splátka.'],['Fixace','Doba, po kterou banka drží úrok pevný. Když skončí, nabídne nový.'],['Refinancování','Nastavení nového úroku po konci fixace. Splátka se může zvýšit nebo snížit.'],['LTV','Kolik procent ceny bytu tvoří dluh. Aplikace upozorní nad 80 % a ukáže riziko nad 90 %.'],['Splátky k příjmu','Kolik procent příjmu domácnosti jde na splátky.'],['Zbude měsíčně','Co zbyde z příjmu po zaplacení bydlení a běžných výdajů.'],['Čistý výtěžek','Co zbyde z prodeje starého bytu po splacení dluhu, provizi, nákladech a případné dani.'],['Daň z pronájmu','Varianty A, B, C jsou tři způsoby, jak ji spočítat. Aplikace ukáže, která vychází nejníž.']];
+  return '<div class="page cap"><div class="head"><div class="t"><span class="eyebrow">Nápověda</span><h1 class="h1 m">Jak aplikace funguje</h1><span class="sub">Zadáte, co o klientovi víte, aplikace to hned přepočítá a ukáže, jestli se nový byt vyplatí. Nepotřebujete žádné znalosti IT.</span></div></div>'
+   +'<div class="card"><div class="rowb"><h2>Aplikace na jedné stránce</h2><span class="mut" style="font-size:13.5px">Čtěte po šesti větvích: nejdřív vlevo shora dolů, potom vpravo</span></div><div style="margin-top:8px">'+helpMap()+'</div></div>'
+   +'<div class="card"><div class="rowb"><h2>Schéma: co se děje s údaji</h2><span class="mut" style="font-size:13.5px">zadáte → aplikace spočítá → vidíte → předáte</span></div><div style="overflow:auto;margin-top:8px">'+svg+'</div></div>'
    +'<div class="two2"><div class="card fc"><h2>Doporučený postup</h2><ol class="hp">'+steps.map((x,i)=>'<li><span class="no">'+(i+1)+'</span><div><b>'+x[0]+'</b><p>'+x[1]+'</p></div></li>').join('')+'</ol></div>'
    +'<div class="stk"><div class="card fc"><h2>Kde co najdu</h2><table class="wh"><thead><tr><th>Záložka</th><th>Odpovídá na</th><th>Kdy je vidět</th></tr></thead><tbody>'+where.map(x=>'<tr><td><b>'+x[0]+'</b></td><td>'+x[1]+'</td><td>'+x[2]+'</td></tr>').join('')+'</tbody></table></div>'
+   +'<div class="card fc"><h2>Slovníček jednoduše</h2><dl class="kn">'+gloss.map(x=>'<dt>'+x[0]+'</dt><dd>'+x[1]+'</dd>').join('')+'</dl></div>'
    +'<div class="card fc"><h2>Co je dobré vědět</h2><dl class="kn">'+know.map(x=>'<dt>'+x[0]+'</dt><dd>'+x[1]+'</dd>').join('')+'</dl></div></div></div></div>';
 }
 /* ---------- průvodce novým klientem ---------- */
