@@ -14,7 +14,7 @@ Demonstrační nástroj: více klientů, u každého stávající byt a až 6 ka
 - `js/model.js` – výpočty (anuita, refixace, LTV, DSTI, prodej s daní, daň z pronájmu varianty A/B/C, scénáře).
 - `js/store.js` – localStorage (`kalkulacka-bydleni-demo-v1`), export/import JSON, ukázkoví klienti.
 - `js/derive.js` – odvozené texty a hodnoty pro obrazovky. `js/charts.js` – SVG/HTML grafy (Sankey, sloupce, pruhy).
-- `js/app.js` – 13 obrazovek, boční panel, režim pro klienta. `styles.css` – tokeny a komponenty (paleta Okabe–Ito, šrafování místo samotné barvy).
+- `js/app.js` – 13 obrazovek, průvodce novým klientem (4 kroky, klient vznikne až po dokončení), boční panel, režim pro klienta. `styles.css` – tokeny a komponenty (paleta Okabe–Ito, šrafování místo samotné barvy).
 
 ## Data a soukromí
 Data zůstávají jen v prohlížeči (localStorage). Nic se neodesílá. Zálohu a přenos řeší export/import JSON (jeden klient nebo všichni; import vždy přidává, nic nepřepisuje). Poškozená data se uloží do `…-poskozena` a načte se ukázka.

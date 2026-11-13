@@ -14,10 +14,11 @@ const UI={view:'home',panel:{open:false,vi:0},collapsed:{ins:true},present:false
   charts:{},dd:false,ddQ:'',modal:null,editing:null,homeQ:'',homeAll:false,scenVar:0,grafVar:0,srovMain:false,importRes:null,saveWarned:false};
 const VIEWS=['home','prehled','scenare','srovnani','grafy','byt','prijmy'];
 const $=s=>document.querySelector(s);
-const cur=()=>S.clients.find(c=>c.id===S.activeId)||S.clients[0];
+const cur=()=>UI.wiz?UI.wiz.draft:(S.clients.find(c=>c.id===S.activeId)||S.clients[0]);
 
 let saveT=null;
 function persist(touch){
+  if(UI.wiz){if(touch)cur().updated=Date.now();return;}
   if(touch){const c=cur();if(c)c.updated=Date.now();S.changes=(S.changes||0)+1;}
   clearTimeout(saveT);
   saveT=setTimeout(()=>{if(!Store.save(window.localStorage,S)&&!UI.saveWarned){UI.saveWarned=true;toast('Data se nepodařilo uložit do prohlížeče. Použijte Exportovat.');}},150);
@@ -399,10 +400,8 @@ function viewScenare(c,r){
 function toggleCard(title,act,on,inner,extra){
   return '<div class="card fc"><div class="hd"><b>'+title+'</b>'+(extra||'')+(act?tg(act,on,title):'')+'</div>'+(on||!act?inner:'')+'</div>';
 }
-function viewByt(c,r){
-  const T=r.T,f=c.flat,P=r.P;
-  const usage=T.sell?'sell':T.rent?'rent':'none';
-  const head='<div class="head"><div class="t"><h1 class="h1 m">Stávající byt</h1><span class="sub">Odhadní cena '+kc(f.est)+' · koupen za '+kc(f.purchase)+'</span></div><div class="row"><span class="mut" style="font-size:14px">Co s bytem po přestěhování</span>'+seg('usage',[['none','Ponechat prázdný'],['sell','Prodat'],['rent','Pronajímat']],usage,'lg')+'</div></div>';
+function flatCards(c,r){
+  const T=r.T,f=c.flat;
   const opsC='<div class="card fc"><div class="hd"><b>Hodnota a provoz</b><span class="sum">'+kc(r.flatOps)+' / měs.</span></div><div class="g2">'+fld('Odhadní cena',numInp('flat.est','Kč',{aria:'Odhadní cena'}))+fld('Pořizovací cena',numInp('flat.purchase','Kč',{aria:'Pořizovací cena'}))+'</div>'
     +'<div class="sec">Provozní náklady · Kč měsíčně</div>'+itemList('flat.ops')+'</div>';
   const mortC='<div class="card fc"><div class="hd"><b>Hypotéka</b>'+tg('tMort',c.t.mort,'Stávající hypotéka')+'</div>'+(c.t.mort?'<div class="g4">'+fld('Zůstatek',numInp('flat.mort.balance','Kč',{aria:'Zůstatek'}))+fld('Sazba',numInp('flat.mort.rate','%',{kind:'dec',aria:'Sazba'}))+fld('Zbývá',numInp('flat.mort.months','měs.',{aria:'Zbývá měsíců'}))+fld('Pojištění',numInp('flat.mort.ins','Kč',{aria:'Pojištění'}))+'</div>':'')+'</div>';
@@ -410,6 +409,13 @@ function viewByt(c,r){
   let useC='';
   if(T.rent)useC='<div class="card fc"><div class="hd"><b>Pronájem</b></div><div class="g3">'+fld('Nájemné',numInp('flat.rent.rent','Kč/měs.',{aria:'Nájemné'}))+fld('Neobsazenost',numInp('flat.rent.vac','%',{kind:'dec',aria:'Neobsazenost'}))+fld('Opravy a údržba',numInp('flat.rent.repairs','Kč/rok',{aria:'Opravy a údržba'}))+'</div></div>';
   if(T.sell)useC='<div class="card fc"><div class="hd"><b>Prodej</b></div><div class="g3">'+fld('Provize',numInp('flat.sale.comm','%',{kind:'dec',aria:'Provize'}))+fld('Náklady prodeje',numInp('flat.sale.costs','Kč',{aria:'Náklady prodeje'}))+fld('Osvobozeno od daně',seg('exempt',[['1','Ano'],['0','Ne']],f.sale.exempt?'1':'0','lg'))+'</div></div>';
+  return {opsC,mortC,fixC,useC};
+}
+function viewByt(c,r){
+  const T=r.T,f=c.flat,P=r.P;
+  const usage=T.sell?'sell':T.rent?'rent':'none';
+  const head='<div class="head"><div class="t"><h1 class="h1 m">Stávající byt</h1><span class="sub">Odhadní cena '+kc(f.est)+' · koupen za '+kc(f.purchase)+'</span></div><div class="row"><span class="mut" style="font-size:14px">Co s bytem po přestěhování</span>'+seg('usage',[['none','Ponechat prázdný'],['sell','Prodat'],['rent','Pronajímat']],usage,'lg')+'</div></div>';
+  const {opsC,mortC,fixC,useC}=flatCards(c,r);
   const left='<div class="stk">'+opsC+mortC+fixC+useC+'</div>';
   // pravá strana
   let right='';
@@ -461,6 +467,55 @@ function viewPrijmy(c,r){
   const flow='<div class="card"><div class="rowb"><h2>Kam jde příjem</h2><span class="mut" style="font-size:13px">Kč měsíčně · dnes</span></div><div style="margin-top:10px">'+(r.income>0?sk.svg:'<p class="mut">Zadejte příjem, diagram se ukáže hned.</p>')+'</div></div>';
   return '<div class="page"><div class="head"><div class="t"><h1 class="h1 m">Příjmy a výdaje</h1><span class="sub">Společné pro všechny varianty. Tab přeskakuje mezi částkami, názvy položek jsou přepsatelné.</span></div></div>'
    +'<div class="three"><div class="stk">'+client+sit+'</div><div class="stk">'+inc+exp+'</div><div class="stk">'+ann+flow+'</div></div></div>';
+}
+
+/* ---------- průvodce novým klientem ---------- */
+const WSTEPS=[['Klient a příjmy','jméno, úspory, měsíční příjmy'],['Výdaje','měsíční a roční výdaje domácnosti'],['Situace a stávající byt','co klient má a co s tím zamýšlí'],['Varianty nového bytu','až '+Store.MAXV+' bytů ke srovnání']];
+function wizHeader(){
+  const st=UI.wiz.step;
+  return '<header class="hdr wizh"><button class="logo" data-act="wizCancel" aria-label="Zrušit zakládání"><i>KB</i><span>Kalkulačka bydlení</span></button><b class="wt">Nový klient</b>'
+   +'<nav class="wsteps" aria-label="Kroky">'+WSTEPS.map((x,i)=>'<button class="ws'+(i===st?' on':i<st?' done':'')+'" data-act="wizGo" data-s="'+i+'"'+(i===st?' aria-current="step"':'')+'><i>'+(i<st?'✓':i+1)+'</i><span>'+x[0]+'</span></button>').join('')+'</nav>'
+   +'<div class="sp"></div><button class="btn" data-act="wizCancel">Zrušit</button></header>';
+}
+function wizLive(c,r){
+  const nv=c.variants.length;
+  return '<div class="wlive"><span><small>Příjem</small><b>'+(r.income>0?kc(r.income):'—')+'</b></span><span><small>Výdaje domácnosti</small><b>'+(r.exp>0?kc(r.exp):'—')+'</b></span><span><small>Úspory</small><b>'+(r.savings>0?kc(r.savings):'—')+'</b></span><span><small>Varianty</small><b>'+nv+' z '+Store.MAXV+'</b></span></div>';
+}
+function viewWiz(c,r){
+  const st=UI.wiz.step,t=c.t,T=r.T;
+  let body='',title=WSTEPS[st][0],sub='';
+  if(st===0){
+    sub='Vyplňte, co už víte. Cokoli můžete nechat prázdné a doplnit později.';
+    body='<div class="three"><div class="stk"><div class="card fc"><b style="font-size:17px">Klient</b>'+fld('Jméno',txtInp('name',{aria:'Jméno klienta',ph:'např. Novákovi'}))
+      +fld('Poznámka','<label class="inp ta"><textarea rows="2" data-f="note" data-k="text" aria-label="Poznámka">'+esc(c.note||'')+'</textarea></label>')+fld('Úspory k dispozici',numInp('savings','Kč',{aria:'Úspory k dispozici'}))+'</div></div>'
+      +'<div class="stk"><div class="card fc"><div class="hd"><b>Měsíční příjmy</b><span class="sum">'+kc(r.income)+'</span></div>'+itemList('incomes')+'</div></div><div class="stk"></div></div>';
+  }else if(st===1){
+    sub='Názvy jsou předvyplněné a přepsatelné, stačí doplnit částky.';
+    const ann=t.annual?'<div class="card fc"><div class="hd"><b>Roční jednorázové výdaje</b><span class="sum">'+kc(r.annualY)+' / rok</span></div>'+itemList('annual')+'<div class="mut" style="font-size:13px">÷ 12 = '+kc(r.annualM)+' měsíčně</div></div>':'';
+    body='<div class="three"><div class="stk"><div class="card fc"><div class="hd"><b>Výdaje domácnosti</b><span class="sum">'+kc(r.exp)+' / měs.</span></div>'+itemList('expenses')+'</div></div>'
+      +'<div class="stk"><div class="card"><div class="trow">'+tg('tAnnual',t.annual,'Roční jednorázové výdaje')+'<span>Roční jednorázové výdaje</span><span class="hint">pojištění, dovolená, poplatky…</span></div></div>'+ann+'</div>'
+      +'<div class="stk"><div class="card"><h2>Kam jde příjem</h2><div style="margin-top:10px">'+(r.income>0?incomeSankey(c,r,520,320).svg:'<p class="mut">Zadejte příjem v kroku 1, diagram se ukáže hned.</p>')+'</div></div></div></div>';
+  }else if(st===2){
+    sub='Podle toho se ukážou formuláře. Co klient nemá, vypněte.';
+    const tr=(act,on,label,cls,hint)=>'<div class="trow '+(cls||'')+'">'+tg(act,on,label)+'<span>'+label+'</span>'+(hint?'<span class="hint">'+hint+'</span>':'')+'</div>';
+    const sit='<div class="card"><div class="rowb"><h2>Situace</h2></div><div style="margin-top:8px">'
+      +tr('tFlat',t.flat,'Má stávající byt')
+      +(t.flat?tr('tMort',t.mort,'Stávající hypotéka','l1')+(t.mort?tr('tFix',t.fix,'Končí fixace','l2'):'')+tr('tSell',t.sell,'Prodat stávající byt','l1','vylučuje se s pronájmem')+tr('tRent',t.rent,'Pronajímat stávající byt','l1'):'')
+      +tr('tBuy',t.buy,'Koupit nový byt')+'</div></div>';
+    if(t.flat){const fc=flatCards(c,r);body='<div class="three"><div class="stk">'+sit+'</div><div class="stk">'+fc.opsC+fc.mortC+fc.fixC+'</div><div class="stk">'+fc.useC+(!t.sell&&!t.rent?'<div class="card"><h2>Byt zůstane prázdný</h2><p class="mut" style="margin-top:8px">Zapněte Prodat nebo Pronajímat, pokud to klient zvažuje.</p></div>':'')+'</div></div>';}
+    else body='<div class="three"><div class="stk">'+sit+'</div><div class="stk"><div class="card"><h2>Bez stávajícího bytu</h2><p class="mut" style="margin-top:8px">Klient nemá co prodat ani pronajmout. Pokračujte na varianty nového bytu.</p></div></div><div class="stk"></div></div>';
+  }else{
+    sub='Přidejte byty, které klient zvažuje. Výsledky se počítají hned po zadání ceny.';
+    const n=c.variants.length,canAdd=n<Store.MAXV;
+    const cards=r.V.map((v,i)=>'<button class="wvar" data-act="editVar" data-i="'+i+'"><span class="no">'+(i+1)+'</span><span class="i"><b>'+esc(v.name)+'</b><small>'+(c.variants[i].price>0?kc(c.variants[i].price)+' · hypotéka '+mil(v.mortgage):'cena zatím nezadána')+'</small></span>'+(c.variants[i].price>0?'<span class="r"><small>zbude měsíčně</small><b class="'+(v.free<0?'neg':'')+'">'+(v.free<0?'▼ ':'')+kc(v.free)+'</b></span>':'')+'<span class="ed">Upravit →</span></button>').join('');
+    body='<div class="wvars">'+(cards||'<div class="card"><p class="mut">Zatím žádná varianta. Klienta lze založit i bez variant a byty doplnit později.</p></div>')
+      +(canAdd?'<button class="addcard" data-act="addVar" style="min-height:96px"><span class="pl">+</span><b>Přidat variantu</b><span>'+n+' ze '+Store.MAXV+'</span></button>':'<div class="addcard dis"><b>Maximum '+Store.MAXV+' variant</b></div>')+'</div>';
+  }
+  const last=st===3;
+  return '<div class="page wiz"><div class="head"><div class="t"><span class="eyebrow">Krok '+(st+1)+' ze 4</span><h1 class="h1 m">'+title+'</h1><span class="sub">'+sub+'</span></div>'+wizLive(c,r)+'</div>'+body
+   +'<div class="wfoot"><button class="btn" data-act="wizBack"'+(st===0?' disabled':'')+'>← Zpět</button><span class="mut" style="font-size:13px">Klient se vytvoří až na konci. Do té doby se nic neukládá.</span><div class="sp"></div>'
+   +(last?'':'<button class="btn" data-act="wizNext">Další →</button>')
+   +'<button class="btn blk" data-act="wizFinish">'+(last?'Vytvořit klienta a ukázat přehled':'Dokončit a ukázat přehled')+'</button></div></div>';
 }
 
 /* ---------- boční panel varianty ---------- */
@@ -525,6 +580,8 @@ function renderModal(){
      +'<div class="acts"><button class="btn" data-act="closeModal">Zavřít</button>'+(res&&!res.ok?'<button class="btn blk" data-act="pickFile">Vybrat jiný soubor</button>':'')+'</div></div>';
   }else if(m.type==='delete'){
     el.innerHTML='<div class="m" role="dialog" aria-modal="true" aria-label="Smazat natrvalo"><div class="hd"><h2>Smazat natrvalo</h2><button class="cl" data-act="closeModal" aria-label="Zavřít">×</button></div><p style="color:var(--ink2)">Klient <b>'+esc(c.name)+'</b> se smaže z tohoto prohlížeče a nejde vrátit. Doporučujeme nejdřív exportovat.</p><div class="acts"><button class="btn" data-act="exportOne">Exportovat klienta</button><button class="btn" data-act="closeModal">Zrušit</button><button class="btn red" data-act="delConfirm">Smazat natrvalo</button></div></div>';
+  }else if(m.type==='wizcancel'){
+    el.innerHTML='<div class="m" role="dialog" aria-modal="true" aria-label="Zrušit zakládání klienta"><div class="hd"><h2>Zrušit zakládání klienta?</h2><button class="cl" data-act="closeModal" aria-label="Zavřít">×</button></div><p style="color:var(--ink2)">Zatím zadané údaje se zahodí, klient se nevytvoří.</p><div class="acts"><button class="btn" data-act="closeModal">Pokračovat ve vyplňování</button><button class="btn blk" data-act="wizDiscard" style="background:var(--risk)">Zahodit a zrušit</button></div></div>';
   }else if(m.type==='restore'){
     el.innerHTML='<div class="m" role="dialog" aria-modal="true" aria-label="Obnovit ukázková data"><div class="hd"><h2>Obnovit ukázková data</h2><button class="cl" data-act="closeModal" aria-label="Zavřít">×</button></div><p style="color:var(--ink2)">Ukázkoví klienti se vrátí do původního stavu, vaše úpravy v nich se ztratí. Klienti, které jste založili nebo importovali, zůstanou.</p><div class="acts"><button class="btn" data-act="closeModal">Zrušit</button><button class="btn blk" data-act="restoreConfirm">Obnovit ukázky</button></div></div>';
   }
@@ -559,7 +616,8 @@ function render(){
   const app=$('#app');
   document.body.classList.toggle('pres',UI.present);
   let html;
-  if(UI.present&&c){html=presentHeader(c)+'<main id="view">'+presentBody(c,r)+'</main>';}
+  if(UI.wiz){html=wizHeader()+NOTE+'<main id="view">'+viewWiz(c,r)+'</main>';}
+  else if(UI.present&&c){html=presentHeader(c)+'<main id="view">'+presentBody(c,r)+'</main>';}
   else if(UI.view==='home'||!c){html=header(c,r)+NOTE+'<main id="view">'+viewHome()+'</main>';}
   else{
     let view=UI.view;
@@ -581,12 +639,22 @@ function render(){
 
 /* ---------- akce ---------- */
 const A={};
-function go(v){UI.view=v;UI.dd=false;UI.panel.open=false;if(location.hash!=='#'+v)history.replaceState(null,'','#'+v);window.scrollTo(0,0);}
+function go(v){if(UI.wiz)return;UI.view=v;UI.dd=false;UI.panel.open=false;if(location.hash!=='#'+v)history.replaceState(null,'','#'+v);window.scrollTo(0,0);}
 A.nav=t=>{go(t.dataset.v);};
 A.open=t=>{S.activeId=t.dataset.id;UI.dd=false;UI.view='prehled';UI.panel.open=false;UI.scenVar=0;UI.grafVar=0;persist();history.replaceState(null,'','#prehled');window.scrollTo(0,0);};
 A.dd=()=>{UI.dd=!UI.dd;UI.ddQ='';};
 A.homeAll=()=>{UI.homeAll=true;};
-A.newClient=()=>{const n=mkClient({name:'Nový klient'});S.clients.unshift(n);S.activeId=n.id;S.changes=(S.changes||0)+1;UI.dd=false;UI.view='prehled';persist();toast('Nový klient založen');};
+A.newClient=()=>{UI.dd=false;UI.panel.open=false;UI.modal=null;UI.wiz={draft:mkClient({name:''}),step:0};window.scrollTo(0,0);};
+A.wizGo=t=>{UI.wiz.step=+t.dataset.s;UI.panel.open=false;window.scrollTo(0,0);};
+A.wizNext=()=>{UI.wiz.step=Math.min(3,UI.wiz.step+1);UI.panel.open=false;window.scrollTo(0,0);};
+A.wizBack=()=>{UI.wiz.step=Math.max(0,UI.wiz.step-1);UI.panel.open=false;window.scrollTo(0,0);};
+A.wizFinish=()=>{
+  const d=UI.wiz.draft;if(!(d.name||'').trim())d.name='Nový klient';
+  d.updated=Date.now();S.clients.unshift(d);S.activeId=d.id;S.changes=(S.changes||0)+1;
+  UI.wiz=null;UI.panel.open=false;UI.view='prehled';UI.scenVar=0;UI.grafVar=0;history.replaceState(null,'','#prehled');window.scrollTo(0,0);persist();toast('Klient založen');
+};
+A.wizCancel=()=>{UI.modal={type:'wizcancel'};};
+A.wizDiscard=()=>{UI.wiz=null;UI.modal=null;UI.panel.open=false;UI.view='home';history.replaceState(null,'','#home');window.scrollTo(0,0);toast('Zakládání klienta zrušeno');};
 A.dupClient=()=>{const c=cur();const n=Store.duplicate(c);S.clients.unshift(n);S.activeId=n.id;S.changes=(S.changes||0)+1;UI.dd=false;UI.view='prehled';persist();toast('Klient zduplikován');};
 A.delClient=()=>{UI.modal={type:'delete'};};
 A.delConfirm=()=>{const c=cur();S.clients=S.clients.filter(x=>x.id!==c.id);UI.modal=null;S.changes=(S.changes||0)+1;if(!S.clients.length){const n=mkClient({name:'Nový klient'});S.clients.push(n);}S.activeId=S.clients[0].id;UI.view='home';persist();toast('Klient smazán');};
@@ -617,7 +685,7 @@ A.addVar=()=>{
   const base=c.variants[c.variants.length-1];
   const v=mkVar('Nová varianta '+(c.variants.length+1),0);
   if(base){v.rate=base.rate;v.years=base.years;}
-  c.t.buy=true;c.variants.push(v);persist(true);if(UI.view!=='prehled'&&UI.view!=='srovnani')go('prehled');UI.panel={open:true,vi:c.variants.length-1};
+  c.t.buy=true;c.variants.push(v);persist(true);if(!UI.wiz&&UI.view!=='prehled'&&UI.view!=='srovnani')go('prehled');UI.panel={open:true,vi:c.variants.length-1};
 };
 A.dupVar=()=>{const c=cur();if(c.variants.length>=Store.MAXV)return;c.variants.splice(UI.panel.vi+1,0,Store.dupVariant(c.variants[UI.panel.vi]));UI.panel.vi++;persist(true);};
 A.delVar=()=>{const c=cur();c.variants.splice(UI.panel.vi,1);UI.panel.vi=Math.max(0,UI.panel.vi-1);if(!c.variants.length)UI.panel.open=false;UI.scenVar=0;UI.grafVar=0;persist(true);toast('Varianta odebrána');};
