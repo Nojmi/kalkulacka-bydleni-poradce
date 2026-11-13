@@ -375,3 +375,12 @@ body.pres .note{height:44px;font-size:15px;justify-content:center}
 
 .yr{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:14px;color:var(--ink2)}
 .yr small{color:var(--ink3);font-size:12px}.yr b{font-size:18px;font-variant-numeric:tabular-nums;color:var(--ink)}.yr b.neg{color:var(--risk)}
+
+/* nápověda */
+.helpbar{display:flex;align-items:center;gap:16px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 22px}
+.helpbar:hover{border-color:var(--acc)}.helpbar .hi{width:38px;height:38px;border-radius:19px;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:700;font-size:19px}
+.helpbar .ht{flex:1;display:flex;flex-direction:column;gap:2px}.helpbar small{color:var(--ink2);font-size:14px}
+.two2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px;align-items:start}
+.hp{list-style:none;padding:0;margin:6px 0 0;display:flex;flex-direction:column;gap:14px}.hp li{display:flex;gap:14px}.hp .no{flex:none;width:30px;height:30px;border-radius:15px;background:var(--pill);display:grid;place-items:center;font-weight:700;font-size:14px}.hp p{color:var(--ink2);font-size:14.5px;margin-top:2px}
+.kn{display:grid;grid-template-columns:170px 1fr;gap:10px 16px;margin:6px 0 0}.kn dt{font-weight:650}.kn dd{color:var(--ink2);font-size:14.5px;margin:0}
+.wh{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:6px}.wh th{text-align:left;font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;padding:6px 10px 8px 0;border-bottom:1px solid var(--line)}.wh td{text-align:left;padding:10px 10px 10px 0;border-bottom:1px solid var(--row);vertical-align:top;color:var(--ink2)}.wh td:first-child{white-space:nowrap;color:var(--ink)}

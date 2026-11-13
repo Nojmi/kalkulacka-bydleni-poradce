@@ -12,7 +12,7 @@ const loaded=Store.load(window.localStorage);
 const S=loaded.state;                                  // trvalý stav: clients, activeId, lastBackup, changes
 const UI={view:'home',panel:{open:false,vi:0},collapsed:{ins:true},present:false,presTab:'prehled',
   charts:{},dd:false,ddQ:'',modal:null,editing:null,homeQ:'',homeAll:false,scenVar:0,grafVar:0,srovMain:false,importRes:null,saveWarned:false};
-const VIEWS=['home','prehled','scenare','srovnani','grafy','byt','prijmy'];
+const VIEWS=['home','napoveda','prehled','scenare','srovnani','grafy','byt','prijmy'];
 const $=s=>document.querySelector(s);
 const cur=()=>UI.wiz?UI.wiz.draft:(S.clients.find(c=>c.id===S.activeId)||S.clients[0]);
 
@@ -72,8 +72,8 @@ function bestHtml(txt,isBest){return isBest?'<span class="bv">'+txt+'</span>':tx
 
 /* ---------- hlavička ---------- */
 function header(c,r){
-  if(UI.view==='home'||!c){
-    return '<header class="hdr"><button class="logo" data-act="nav" data-v="home" aria-label="Domů"><i>KB</i><span>Kalkulačka bydlení</span></button><div class="sp"></div><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button></header>';
+  if(UI.view==='home'||UI.view==='napoveda'||!c){
+    return '<header class="hdr"><button class="logo" data-act="nav" data-v="home" aria-label="Domů"><i>KB</i><span>Kalkulačka bydlení</span></button><div class="sp"></div><button class="btn" data-act="help">'+(UI.view==='napoveda'?'← Zpět do aplikace':'Jak aplikace funguje')+'</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button></header>';
   }
   const T=r.T;
   const tabs=[['prehled','Přehled']];
@@ -84,7 +84,7 @@ function header(c,r){
   return '<header class="hdr"><button class="logo" data-act="nav" data-v="home" aria-label="Domů"><i>KB</i><span>Kalkulačka bydlení</span></button>'
    +'<button class="who'+(UI.dd?' open':'')+'" data-act="dd" aria-haspopup="listbox" aria-expanded="'+UI.dd+'"><span class="av">'+esc(D.initials(c.name))+'</span><b>'+esc(c.name||'Bez jména')+'</b><small>'+S.clients.length+' '+pl(S.clients.length,'klient','klienti','klientů')+(UI.dd?' ▴':' ▾')+'</small></button>'
    +'<nav class="tabs" aria-label="Sekce">'+tabs.map(t=>'<button class="tab'+(UI.view===t[0]?' on':'')+'" data-act="nav" data-v="'+t[0]+'">'+t[1]+'</button>').join('')+'</nav>'
-   +'<div class="sp"></div><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
+   +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
 const NOTE='<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Nezadávejte skutečné údaje klientů</span><span>Daň z pronájmu je zjednodušený, neověřený model</span><span>Pojištění hypotéky je pevná, ručně zadaná částka</span></div>';
@@ -109,9 +109,10 @@ function viewHome(){
   const ch=S.changes||0;
   return '<div class="page"><div class="home"><div><h1>Dobrý den</h1><p class="q">Koho dnes připravujete?</p></div>'
    +'<input class="search" id="homeq" data-f="homeq" placeholder="Hledat klienta podle jména nebo poznámky…" value="'+esc(UI.homeQ)+'" aria-label="Hledat klienta" autocomplete="off">'
-   +'<div class="acts3"><button class="act blk" data-act="newClient"><b>+ Nový klient</b><span>Prázdný klient se třemi kroky</span></button>'
+   +'<div class="acts3"><button class="act blk" data-act="newClient"><b>+ Nový klient</b><span>Průvodce ve čtyřech krocích</span></button>'
    +'<button class="act" data-act="importOpen"><b>Importovat zálohu</b><span>Soubor JSON, nic se nepřepíše</span></button>'
    +'<button class="act" data-act="backup"><b>Zálohovat všechny</b><span>'+(S.lastBackup?'Naposledy '+(days()===0?'dnes':'před '+days()+' '+pl(days(),'dnem','dny','dny')):'Zatím nezálohováno')+', od té doby '+ch+' '+pl(ch,'změna','změny','změn')+'</span></button></div>'
+   +'<button class="helpbar" data-act="help"><span class="hi">?</span><span class="ht"><b>Jak aplikace funguje</b><small>Schéma celé aplikace: co zadat, co se počítá a kde co najdete. Pro každého, kdo ji otevře poprvé.</small></span><span class="ar">→</span></button>'
    +'<div class="hg"><div class="card"><div class="rowb"><h2>Naposledy upravení</h2>'+(UI.homeAll||q?'':'<button class="lnk" data-act="homeAll">Všichni klienti ('+S.clients.length+')</button>')+'</div><div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">'+rowsH+'</div></div>'
    +'<div class="card"><h2>V číslech</h2><div class="nums">'
    +'<div class="tile"><small>Klientů</small><b>'+S.clients.length+'</b><span>z toho '+empty+' '+pl(empty,'nevyplněný','nevyplněné','nevyplněných')+'</span></div>'
@@ -484,6 +485,38 @@ function viewPrijmy(c,r){
    +'<div class="three"><div class="stk">'+client+sit+'</div><div class="stk">'+inc+exp+'</div><div class="stk">'+ann+flow+'</div></div></div>';
 }
 
+/* ---------- nápověda: schéma aplikace ---------- */
+function helpSvg(){
+  const box=(x,y,w,h,col,t,sub)=>'<g><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="14" fill="#fff" stroke="'+col+'" stroke-width="2"/><rect x="'+x+'" y="'+y+'" width="7" height="'+h+'" rx="3" fill="'+col+'"/><text x="'+(x+20)+'" y="'+(y+25)+'" font-size="16" font-weight="650" fill="#1f2328">'+t+'</text>'+sub.map((l,i)=>'<text x="'+(x+20)+'" y="'+(y+45+i*17)+'" font-size="13" fill="#5b616b">'+l+'</text>').join('')+'</g>';
+  const arr=(x1,y1,x2,y2,col)=>{const m=(x1+x2)/2;return '<path d="M'+x1+' '+y1+' C'+m+' '+y1+' '+m+' '+y2+' '+x2+' '+y2+'" fill="none" stroke="'+(col||'#9aa1ab')+'" stroke-width="2" marker-end="url(#ah)"/>';};
+  const colH=(x,n,t)=>'<g><circle cx="'+(x+14)+'" cy="22" r="14" fill="#1f2328"/><text x="'+(x+14)+'" y="27" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">'+n+'</text><text x="'+(x+38)+'" y="28" font-size="17" font-weight="700" fill="#1f2328">'+t+'</text></g>';
+  const B='#0072B2',G='#009E73',O='#E69F00',P='#CC79A7',K='#3b4048';
+  const inY=[60,150,240,330,420];
+  let g='<svg viewBox="0 0 1500 540" width="100%" role="img" aria-label="Schéma aplikace: zadání údajů, výpočet v prohlížeči, obrazovky s výsledky a předání klientovi" style="display:block"><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#9aa1ab"/></marker></defs>';
+  g+=colH(10,1,'Zadáte')+colH(450,2,'Počítá se hned')+colH(830,3,'Vidíte')+colH(1200,4,'Předáte a uložíte');
+  const ins=[['Klient','jméno, poznámka, úspory'],['Příjmy a výdaje','měsíční a roční položky'],['Situace','byt, hypotéka, fixace, prodej / pronájem'],['Stávající byt','hodnota, provoz, hypotéka, nájem nebo prodej'],['Varianty nového bytu','1 až 6: cena, rekonstrukce, úspory, hypotéka']];
+  ins.forEach((x,i)=>{g+=box(10,inY[i],360,76,B,x[0],[x[1]]);g+=arr(370,inY[i]+38,450,270,B);});
+  g+='<g><rect x="450" y="60" width="330" height="436" rx="18" fill="#f1f7fc" stroke="'+B+'" stroke-width="2"/><text x="474" y="92" font-size="17" font-weight="700" fill="#1f2328">Výpočet v prohlížeči</text>'
+    +['Anuita a měsíční splátka','Zůstatek hypotéky a splátka po refixaci','LTV a poměr splátek k příjmu','Prodej: provize, náklady, daň ze zisku','Pronájem: daň ve variantách A, B, C','Čtyři scénáře co se stávajícím bytem','Kumulativní zbytek v čase'].map((l,i)=>'<text x="474" y="'+(130+i*36)+'" font-size="14" fill="#1f2328">• '+l+'</text>').join('')
+    +'<text x="474" y="410" font-size="13" fill="#5b616b">Výsledky se přepočítají po každém</text><text x="474" y="428" font-size="13" fill="#5b616b">zadaném znaku, tlačítko Spočítat</text><text x="474" y="446" font-size="13" fill="#5b616b">není potřeba. Nic se neodesílá.</text></g>';
+  const outs=[['Přehled','nejlepší varianta, Dnes vs. varianty','prehled'],['Scénáře','prodat · pronajímat · refinancovat','scenare'],['Srovnání','tabulka všech variant vedle sebe','srovnani'],['Grafy','splátky, financování, zbytek','grafy'],['Stávající byt','daně, prodej, hypotéka krok za krokem','byt']];
+  const outY=[60,150,240,330,420];
+  outs.forEach((x,i)=>{g+=box(830,outY[i],340,76,G,x[0],[x[1]]);g+=arr(780,270,830,outY[i]+38,G);});
+  const last=[['Režim pro klienta','bez políček, jen výsledky k ukázání',K,60],['Export JSON','jeden klient nebo všichni',O,150],['Import ze zálohy','jen přidává, nic nepřepíše',O,240],['Uloženo v prohlížeči','localStorage, nikam se neposílá',P,330]];
+  last.forEach(x=>{g+=box(1200,x[3],290,76,x[2],x[0],[x[1]]);g+=arr(1170,270,1200,x[3]+38,x[2]);});
+  return g+'</svg>';
+}
+function viewHelp(){
+  const svg=helpSvg();
+  const steps=[['Založte klienta','Na úvodní obrazovce „+ Nový klient“. Průvodce má čtyři kroky: klient a příjmy, výdaje, situace, varianty. Klient vznikne až na konci.'],['Nastavte situaci','Má klient stávající byt a hypotéku? Končí fixace? Co zamýšlí s bytem? Podle toho se zobrazí jen potřebné formuláře.'],['Zadejte varianty','Až 6 bytů. Stačí cena, ostatní má předvyplněné. Výsledky vidíte ihned v bočním panelu.'],['Začněte Přehledem','Ukáže, která varianta nechá klientovi nejvíc, a porovná ji s dneškem.'],['Projděte Scénáře','Prodat, pronajímat, nebo jen refinancovat. Karty mají i roční součet a graf v čase.'],['Ukažte klientovi','„Prezentovat klientovi“ skryje všechna pole. Pak exportujte JSON jako zálohu.']];
+  const where=[['Přehled','Která varianta je nejlepší a jak se liší od dneška','vždy'],['Scénáře','Co se stávajícím bytem: prodat, pronajímat, refinancovat','stávající byt + nový byt + aspoň jedna varianta'],['Srovnání','Všechny varianty v jedné tabulce, nejlepší hodnota označená','vždy'],['Grafy','Splátky, financování, zbytek měsíčně','aspoň jedna varianta'],['Stávající byt','Hodnota, provoz, hypotéka, fixace, daň z pronájmu, prodej','pokud má klient byt'],['Příjmy a výdaje','Společné údaje pro všechny varianty, přepínače situace','vždy']];
+  const know=[['Orientační výpočet','Není to nabídka banky. Čísla slouží k rozhovoru, ne ke smlouvě.'],['Fiktivní data','Do aplikace nezadávejte skutečné údaje klientů. Ukázkoví klienti jsou vymyšlení.'],['Daň z pronájmu','Varianty A, B, C jsou zjednodušený, neověřený model.'],['Pojištění hypotéky','Pevná, ručně zadaná částka, ne výpočet z rizik.'],['Značky','◆ nejlepší hodnota, ▲ pozor, ■ riziko, ▼ záporná nebo chybějící. Nikdy jen barva.'],['Data','Jen v tomto prohlížeči. Po smazání dat prohlížeče zmizí, proto zálohujte do JSON.']];
+  return '<div class="page cap"><div class="head"><div class="t"><span class="eyebrow">Nápověda</span><h1 class="h1 m">Jak aplikace funguje</h1><span class="sub">Zadáte údaje, aplikace je hned přepočítá a ukáže v několika pohledech. Schéma vlevo doprava.</span></div></div>'
+   +'<div class="card"><div style="overflow:auto">'+svg+'</div></div>'
+   +'<div class="two2"><div class="card fc"><h2>Doporučený postup</h2><ol class="hp">'+steps.map((x,i)=>'<li><span class="no">'+(i+1)+'</span><div><b>'+x[0]+'</b><p>'+x[1]+'</p></div></li>').join('')+'</ol></div>'
+   +'<div class="stk"><div class="card fc"><h2>Kde co najdu</h2><table class="wh"><thead><tr><th>Záložka</th><th>Odpovídá na</th><th>Kdy je vidět</th></tr></thead><tbody>'+where.map(x=>'<tr><td><b>'+x[0]+'</b></td><td>'+x[1]+'</td><td>'+x[2]+'</td></tr>').join('')+'</tbody></table></div>'
+   +'<div class="card fc"><h2>Co je dobré vědět</h2><dl class="kn">'+know.map(x=>'<dt>'+x[0]+'</dt><dd>'+x[1]+'</dd>').join('')+'</dl></div></div></div></div>';
+}
 /* ---------- průvodce novým klientem ---------- */
 const WSTEPS=[['Klient a příjmy','jméno, úspory, měsíční příjmy'],['Výdaje','měsíční a roční výdaje domácnosti'],['Situace a stávající byt','co klient má a co s tím zamýšlí'],['Varianty nového bytu','až '+Store.MAXV+' bytů ke srovnání']];
 function wizHeader(){
@@ -632,6 +665,7 @@ function render(){
   let html;
   if(UI.wiz){html=wizHeader()+NOTE+'<main id="view">'+viewWiz(c,r)+'</main>';}
   else if(UI.present&&c){html=presentHeader(c)+'<main id="view">'+presentBody(c,r)+'</main>';}
+  else if(UI.view==='napoveda'){html=header(c,r)+NOTE+'<main id="view">'+viewHelp()+'</main>';}
   else if(UI.view==='home'||!c){html=header(c,r)+NOTE+'<main id="view">'+viewHome()+'</main>';}
   else{
     let view=UI.view;
@@ -655,6 +689,7 @@ function render(){
 const A={};
 function go(v){if(UI.wiz)return;UI.view=v;UI.dd=false;UI.panel.open=false;if(location.hash!=='#'+v)history.replaceState(null,'','#'+v);window.scrollTo(0,0);}
 A.nav=t=>{go(t.dataset.v);};
+A.help=()=>{if(UI.view==='napoveda'){go(UI.helpBack&&UI.helpBack!=='napoveda'?UI.helpBack:'home');}else{UI.helpBack=UI.view;go('napoveda');}};
 A.open=t=>{S.activeId=t.dataset.id;UI.dd=false;UI.view='prehled';UI.panel.open=false;UI.scenVar=0;UI.grafVar=0;persist();history.replaceState(null,'','#prehled');window.scrollTo(0,0);};
 A.dd=()=>{UI.dd=!UI.dd;UI.ddQ='';};
 A.homeAll=()=>{UI.homeAll=true;};
