@@ -1,229 +1,106 @@
-/* charts.js – vlastní SVG grafy bez knihoven (žádné CDN).
- * Horizontální sloupce: jednoduché i skládané, záporné hodnoty, tooltip, legenda, tabulkový pohled. */
-(function () {
-  'use strict';
-  const NS = 'http://www.w3.org/2000/svg';
-  const MUTED = '#898781';
+/* Grafy jako samostatné SVG/HTML bloky (bez knihoven). Barvy Okabe–Ito, nikdy jediný nositel informace. */
+(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory(require('./model.js'));else root.Charts=factory(root.KB);})(typeof self!=='undefined'?self:this,function(KB){
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const COL={pmt:'#0072B2',ins:'#E69F00',ops:'#009E73',old:'#CC79A7',neg:'#D55E00',sav:'#009E73',pro:'#E69F00',mor:'#0072B2',hh:'#8c939d',ann:'#b4bac2',reno:'#CC79A7',dark:'#3b4048'};
+const NF=KB.NF;
+let uidn=0;
 
-  // Pevné pořadí kategorických barev (validováno skriptem validate_palette.js: 4 sloty, světlý režim)
-  const SLOT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'];
-  const GRAY = '#c3c2b7';
-
-  const fmtKc = (n) => Math.round(n).toLocaleString('cs-CZ') + ' Kč';
-  function fmtAxis(v, max) {
-    const a = Math.abs(max);
-    if (a >= 2e6) return (v / 1e6).toLocaleString('cs-CZ', { maximumFractionDigits: 1 }) + ' mil.';
-    if (a >= 10000) return (v / 1e3).toLocaleString('cs-CZ', { maximumFractionDigits: 0 }) + ' tis.';
-    return Math.round(v).toLocaleString('cs-CZ');
-  }
-
-  function el(name, attrs, parent) {
-    const e = document.createElementNS(NS, name);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
-    if (parent) parent.appendChild(e);
-    return e;
-  }
-  function html(tag, cls, text) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text !== undefined) e.textContent = text;
-    return e;
-  }
-
-  function niceTicks(min, max, target) {
-    if (min === max) { max = min + 1; }
-    const span = max - min;
-    const raw = span / (target || 5);
-    const p = Math.pow(10, Math.floor(Math.log10(raw)));
-    const m = raw / p;
-    const step = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
-    const lo = Math.floor(min / step) * step;
-    const hi = Math.ceil(max / step) * step;
-    const ticks = [];
-    for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.abs(v) < step / 1e6 ? 0 : v);
-    return { lo, hi, ticks };
-  }
-
-  function barPath(x, y, w, h, r, side) {
-    r = Math.min(r, w, h / 2);
-    if (side === 'right') return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
-    if (side === 'left') return `M${x + w},${y}H${x + r}Q${x},${y} ${x},${y + r}V${y + h - r}Q${x},${y + h} ${x + r},${y + h}H${x + w}Z`;
-    return `M${x},${y}h${w}v${h}h${-w}Z`;
-  }
-
-  // ---- tooltip (jediný, sdílený); texty vždy přes textContent ----
-  let tip = null;
-  function tooltip() {
-    if (!tip) { tip = html('div', 'kbp-tip'); tip.setAttribute('role', 'tooltip'); tip.hidden = true; document.body.appendChild(tip); }
-    return tip;
-  }
-  function showTip(row, series, stacked, fmt, x, y) {
-    const t = tooltip();
-    t.textContent = '';
-    t.appendChild(html('div', 'kbp-tip-title', row.label));
-    row.values.forEach((v, i) => {
-      if (v === null || v === undefined) return;
-      const line = html('div', 'kbp-tip-row');
-      const key = html('span', 'kbp-tip-key');
-      key.style.background = row.color || series[i].color;
-      line.appendChild(key);
-      line.appendChild(html('strong', null, fmt(v)));
-      if (series[i].name) line.appendChild(html('span', 'kbp-tip-name', series[i].name));
-      t.appendChild(line);
-    });
-    if (stacked && row.values.length > 1) {
-      const tot = row.values.reduce((s, v) => s + (v || 0), 0);
-      const line = html('div', 'kbp-tip-row kbp-tip-total');
-      line.appendChild(html('strong', null, fmt(tot)));
-      line.appendChild(html('span', 'kbp-tip-name', 'celkem'));
-      t.appendChild(line);
-    }
-    t.hidden = false;
-    const w = t.offsetWidth, hgt = t.offsetHeight;
-    t.style.left = Math.min(window.innerWidth - w - 8, x + 14) + 'px';
-    t.style.top = Math.max(8, Math.min(window.innerHeight - hgt - 8, y + 14)) + 'px';
-  }
-  const hideTip = () => { if (tip) tip.hidden = true; };
-
-  /**
-   * opts: { title, subtitle, series:[{name,color}], rows:[{label, values:[..], color?, muted?}],
-   *         stacked, fmt, tableHeaders? }
-   * Vrací DOM kartu; vykreslí se podle šířky kontejneru po vložení (volej draw()).
-   */
-  function hbar(opts) {
-    const fmt = opts.fmt || fmtKc;
-    const series = opts.series;
-    const card = html('section', 'kbp-chart');
-    const head = html('div', 'kbp-chart-head');
-    const titles = html('div');
-    titles.appendChild(html('h4', null, opts.title));
-    if (opts.subtitle) titles.appendChild(html('p', 'kbp-sub', opts.subtitle));
-    head.appendChild(titles);
-    const toggle = html('div', 'kbp-seg');
-    const bGraf = html('button', 'on', 'Graf'); bGraf.type = 'button';
-    const bTab = html('button', null, 'Tabulka'); bTab.type = 'button';
-    toggle.append(bGraf, bTab);
-    head.appendChild(toggle);
-    card.appendChild(head);
-
-    if (series.length > 1) {
-      const legend = html('div', 'kbp-legend');
-      series.forEach((s) => {
-        const it = html('span', 'kbp-legend-item');
-        const sw = html('i'); sw.style.background = s.color;
-        it.append(sw, document.createTextNode(s.name));
-        legend.appendChild(it);
-      });
-      card.appendChild(legend);
-    }
-
-    const plot = html('div', 'kbp-plot');
-    card.appendChild(plot);
-
-    const tableWrap = html('div', 'kbp-tablewrap'); tableWrap.hidden = true;
-    const table = html('table', 'kbp-table');
-    const thead = html('thead'); const trh = html('tr');
-    trh.appendChild(html('th', null, opts.tableHeaders ? opts.tableHeaders[0] : ''));
-    series.forEach((s) => trh.appendChild(html('th', 'num', s.name || 'Hodnota')));
-    if (opts.stacked && series.length > 1) trh.appendChild(html('th', 'num', 'Celkem'));
-    thead.appendChild(trh); table.appendChild(thead);
-    const tbody = html('tbody');
-    opts.rows.forEach((r) => {
-      const tr = html('tr');
-      tr.appendChild(html('th', null, r.label));
-      r.values.forEach((v) => tr.appendChild(html('td', 'num', v === null || v === undefined ? '–' : fmt(v))));
-      if (opts.stacked && series.length > 1) tr.appendChild(html('td', 'num', fmt(r.values.reduce((s, v) => s + (v || 0), 0))));
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody); tableWrap.appendChild(table); card.appendChild(tableWrap);
-
-    bGraf.onclick = () => { plot.hidden = false; tableWrap.hidden = true; bGraf.classList.add('on'); bTab.classList.remove('on'); };
-    bTab.onclick = () => { plot.hidden = true; tableWrap.hidden = false; bTab.classList.add('on'); bGraf.classList.remove('on'); };
-
-    function draw() {
-      plot.textContent = '';
-      const W = Math.max(420, plot.clientWidth || card.clientWidth || 700);
-      const rows = opts.rows;
-      const labelW = Math.min(230, Math.max(150, W * 0.24));
-      const padR = 92, rowH = 40, bar = 22, top = 6, axisH = 28;
-
-      // rozsah: kladné a záporné součty
-      let mn = 0, mx = 0;
-      rows.forEach((r) => {
-        let pos = 0, neg = 0;
-        r.values.forEach((v) => { v = v || 0; if (opts.stacked) { if (v >= 0) pos += v; else neg += v; } else { pos = Math.max(pos, v); neg = Math.min(neg, v); } });
-        mx = Math.max(mx, pos); mn = Math.min(mn, neg);
-      });
-      const x0 = labelW + (mn < 0 ? 84 : 0);   // místo pro popisek záporné hodnoty vlevo od sloupce
-      const x1 = W - padR;
-      const H = top + rows.length * rowH + axisH;
-      const nt = niceTicks(mn, mx || 1, Math.max(3, Math.floor((x1 - x0) / 90)));
-      const sx = (v) => x0 + ((v - nt.lo) / (nt.hi - nt.lo)) * (x1 - x0);
-
-      const svg = el('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': opts.title });
-      // mřížka + osa (hairline, plná)
-      nt.ticks.forEach((t) => {
-        el('line', { x1: sx(t), x2: sx(t), y1: top, y2: top + rows.length * rowH, stroke: t === 0 ? '#c3c2b7' : '#e1e0d9', 'stroke-width': 1 }, svg);
-        const lab = el('text', { x: sx(t), y: H - 8, 'text-anchor': 'middle', fill: MUTED, 'font-size': 11, class: 'tn' }, svg);
-        lab.textContent = fmtAxis(t, nt.hi);
-      });
-
-      rows.forEach((r, ri) => {
-        const y = top + ri * rowH + (rowH - bar) / 2;
-        const g = el('g', { class: 'kbp-row', tabindex: 0, role: 'img', 'aria-label': r.label + ': ' + r.values.map((v, i) => (series[i].name ? series[i].name + ' ' : '') + fmt(v || 0)).join(', ') }, svg);
-        // popisek řádku (text token, ne barva řady)
-        const name = r.label.length > 34 ? r.label.slice(0, 33) + '…' : r.label;
-        const t = el('text', { x: labelW - 10, y: y + bar / 2 + 4, 'text-anchor': 'end', 'font-size': 12.5, fill: r.muted ? '#52514e' : '#0b0b0b' }, g);
-        t.textContent = name;
-        if (name !== r.label) { const ti = el('title', {}, g); ti.textContent = r.label; }
-
-        let posCur = 0, negCur = 0, firstPos = true, firstNeg = true;
-        const segs = [];
-        r.values.forEach((v, i) => {
-          v = v || 0;
-          if (v === 0) return;
-          let a, b;
-          if (opts.stacked) {
-            if (v >= 0) { a = posCur; b = posCur + v; posCur = b; } else { a = negCur; b = negCur + v; negCur = b; }
-          } else { a = 0; b = v; if (v >= 0) posCur = Math.max(posCur, v); else negCur = Math.min(negCur, v); }
-          segs.push({ a, b, i, v });
-        });
-        // poslední segment na každé straně má zaoblený konec (data-end), u baseline zůstává rovný
-        const lastPos = segs.filter((s) => s.v > 0).slice(-1)[0];
-        const lastNeg = segs.filter((s) => s.v < 0).slice(-1)[0];
-        segs.forEach((s) => {
-          const gap = 2;
-          let px1 = sx(s.a), px2 = sx(s.b);
-          let xl = Math.min(px1, px2), xr = Math.max(px1, px2);
-          const isPos = s.v > 0;
-          const isFirst = isPos ? s.a === 0 : s.a === 0;
-          if (opts.stacked && !isFirst) { if (isPos) xl += gap; else xr -= gap; }
-          const w = Math.max(0, xr - xl);
-          if (w <= 0) return;
-          const side = isPos ? (s === lastPos ? 'right' : 'none') : (s === lastNeg ? 'left' : 'none');
-          el('path', { d: barPath(xl, y, w, bar, 4, side), fill: r.color || series[s.i].color, class: 'kbp-mark' }, g);
-        });
-
-        // hodnota na konci sloupce (součet u skládaných)
-        const total = opts.stacked ? r.values.reduce((s, v) => s + (v || 0), 0) : (r.values[0] || 0);
-        const hasPos = posCur > 0;
-        const lx = hasPos ? sx(posCur) + 8 : sx(negCur) - 8;
-        const lab = el('text', { x: lx, y: y + bar / 2 + 4, 'text-anchor': hasPos ? 'start' : 'end', 'font-size': 12, 'font-weight': 600, fill: '#0b0b0b', class: 'tn' }, g);
-        lab.textContent = fmt(total);
-
-        // hit oblast přes celý řádek (větší než značka)
-        const hit = el('rect', { x: 0, y: top + ri * rowH, width: W, height: rowH, fill: 'transparent' }, g);
-        const show = (ev) => showTip(r, series, opts.stacked, fmt, ev.clientX, ev.clientY);
-        hit.addEventListener('pointermove', show);
-        hit.addEventListener('pointerleave', hideTip);
-        g.addEventListener('focus', () => { const bb = g.getBoundingClientRect(); showTip(r, series, opts.stacked, fmt, bb.left + labelW, bb.top); });
-        g.addEventListener('blur', hideTip);
-      });
-      plot.appendChild(svg);
-    }
-    return { el: card, draw };
-  }
-
-  window.KBP = window.KBP || {};
-  window.KBP.charts = { hbar, SLOT, GRAY, fmtKc, hideTip };
-})();
+/* ---------- Sankey ----------
+ opts: {width,height,ml,mr,nodeW,gap,nodes:[{id,col,label,value?,text?,color,hatch,neg}],links:[{s,t,v,color,hatch}],midLabel:'top'|'right'} */
+function sankey(o){
+  const W=o.width,H=o.height,nw=o.nodeW||12,gap=o.gap||12,ml=o.ml||0,mr=o.mr||0;
+  const nodes=o.nodes.map(n=>Object.assign({in:0,out:0},n));
+  const byId={};nodes.forEach(n=>byId[n.id]=n);
+  const links=o.links.filter(l=>l.v>0&&byId[l.s]&&byId[l.t]).map(l=>Object.assign({},l));
+  links.forEach(l=>{byId[l.s].out+=l.v;byId[l.t].in+=l.v;});
+  nodes.forEach(n=>{n.val=Math.max(n.in,n.out,n.value||0);});
+  const cols=[...new Set(nodes.map(n=>n.col))].sort((a,b)=>a-b);
+  const colNodes=cols.map(c=>nodes.filter(n=>n.col===c));
+  const innerH=H-24;
+  let k=Infinity;
+  colNodes.forEach(cn=>{const tot=cn.reduce((s,n)=>s+n.val,0);if(tot>0)k=Math.min(k,(innerH-gap*(cn.length-1))/tot);});
+  if(!isFinite(k))k=1;
+  const x0=ml,x1=W-mr-nw;
+  colNodes.forEach((cn,ci)=>{
+    cn.forEach(n=>{n.h=Math.max(4,n.val*k);n.x=cols.length===1?x0:x0+(x1-x0)*ci/Math.max(1,cols.length-1);});
+    const tot=cn.reduce((s,n)=>s+n.h,0)+gap*(cn.length-1);let y=12+(innerH-tot)/2;
+    cn.forEach(n=>{n.y=y;y+=n.h+gap;});
+  });
+  // pořadí toků kvůli minimu křížení
+  nodes.forEach(n=>{n.so=0;n.to=0;});
+  const outs=n=>links.filter(l=>l.s===n.id).sort((a,b)=>byId[a.t].y-byId[b.t].y);
+  const ins=n=>links.filter(l=>l.t===n.id).sort((a,b)=>byId[a.s].y-byId[b.s].y);
+  nodes.forEach(n=>{let off=0;outs(n).forEach(l=>{l.sy=n.y+off;off+=l.v*k;});});
+  nodes.forEach(n=>{let off=0;ins(n).forEach(l=>{l.ty=n.y+off;off+=l.v*k;});});
+  const id='h'+(++uidn);
+  let s='<svg class="sk" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.aria||'Sankeyho diagram')+'" xmlns="http://www.w3.org/2000/svg">';
+  s+='<defs><pattern id="'+id+'" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="#f0a46f"/><rect width="4" height="7" fill="#D55E00"/></pattern></defs>';
+  links.forEach(l=>{
+    const a=byId[l.s],b=byId[l.t],w=Math.max(1.5,l.v*k),xa=a.x+nw,xb=b.x,xm=(xa+xb)/2;
+    const ya=l.sy+l.v*k/2,yb=l.ty+l.v*k/2;
+    const stroke=l.hatch?'url(#'+id+')':(l.color||'#8c939d');
+    s+='<path d="M'+xa+' '+ya.toFixed(1)+' C'+xm+' '+ya.toFixed(1)+' '+xm+' '+yb.toFixed(1)+' '+xb+' '+yb.toFixed(1)+'" fill="none" stroke="'+stroke+'" stroke-width="'+w.toFixed(1)+'" stroke-opacity="'+(l.hatch?.75:.3)+'"><title>'+esc(a.label+' → '+b.label+': '+NF.format(Math.round(l.v))+' Kč')+'</title></path>';
+  });
+  nodes.forEach(n=>{
+    const fill=n.hatch?'url(#'+id+')':(n.color||'#3b4048');
+    s+='<rect x="'+n.x+'" y="'+n.y.toFixed(1)+'" width="'+nw+'" height="'+n.h.toFixed(1)+'" rx="3" fill="'+fill+'"><title>'+esc(n.label+': '+NF.format(Math.round(n.val))+' Kč')+'</title></rect>';
+  });
+  // popisky: levý sloupec vlevo, pravý vpravo, prostřední nad uzlem
+  const lab=(n,side)=>{
+    const val=n.text!=null?n.text:NF.format(Math.round(n.val));
+    return {n,side,txt:esc(n.label)+' <tspan class="v">'+esc(val)+'</tspan>'};
+  };
+  const L=[],R=[],M=[];
+  nodes.forEach(n=>{const ci=cols.indexOf(n.col);if(cols.length>1&&ci===0)L.push(lab(n,'l'));else if(ci===cols.length-1&&cols.length>1)R.push(lab(n,'r'));else if(cols.length===1)R.push(lab(n,'r'));else M.push(lab(n,'m'));});
+  const spread=(arr)=>{arr.sort((a,b)=>(a.n.y+a.n.h/2)-(b.n.y+b.n.h/2));let last=-1e9;arr.forEach(a=>{let y=a.n.y+a.n.h/2;if(y<last+15)y=last+15;a.y=y;last=y;});
+    let over=(arr.length?arr[arr.length-1].y:0)-(H-6);if(over>0){let nxt=1e9;for(let i=arr.length-1;i>=0;i--){arr[i].y=Math.min(arr[i].y-Math.max(0,over),nxt-15);nxt=arr[i].y;}}};
+  spread(L);spread(R);
+  L.forEach(a=>{s+='<text x="'+(a.n.x-8)+'" y="'+(a.y+4).toFixed(1)+'" text-anchor="end"'+(a.n.neg?' class="neg"':'')+'>'+a.txt+'</text>';});
+  R.forEach(a=>{s+='<text x="'+(a.n.x+nw+8)+'" y="'+(a.y+4).toFixed(1)+'"'+(a.n.neg?' class="neg"':'')+'>'+a.txt+'</text>';});
+  M.forEach(a=>{s+='<text x="'+(a.n.x+nw/2)+'" y="'+(Math.max(10,a.n.y-8)).toFixed(1)+'" text-anchor="middle">'+a.txt+'</text>';});
+  return s+'</svg>';
+}
+/* tabulková podoba toků (zdroj → cíl) */
+function flowTable(o){
+  const byId={};o.nodes.forEach(n=>byId[n.id]=n);
+  let h='<div class="twrap"><table class="tbl sm"><thead><tr><th>Zdroj</th><th>Cíl</th><th>Částka</th></tr></thead><tbody>';
+  o.links.filter(l=>l.v>0).forEach(l=>{h+='<tr><td>'+esc(byId[l.s].label)+'</td><td style="text-align:left">'+esc(byId[l.t].label)+'</td><td>'+KB.kc(l.v)+'</td></tr>';});
+  return h+'</tbody></table></div>';
+}
+/* ---------- skládané sloupce (HTML) ---------- */
+function stackedCols(items,legend){
+  const max=Math.max(1,...items.map(i=>i.total));
+  let h='<div class="legs">'+legend.map(l=>'<span><i class="sw" style="background:'+l[1]+'"></i>'+esc(l[0])+'</span>').join('')+'</div>';
+  h+='<div class="cols">';
+  items.forEach(it=>{
+    const hp=(it.total/max*100*0.86).toFixed(2);
+    h+='<div class="col"><span class="tot">'+KB.NF.format(Math.round(it.total))+'</span><div class="bar'+(it.dashed?' dash':'')+'" style="height:'+hp+'%">';
+    it.parts.forEach(p=>{if(p.v<=0)return;const big=p.v/it.total*parseFloat(hp)/100*300>=16;
+      h+='<div style="flex:'+p.v+' 0 0;background:'+p.color+';color:'+(p.dark?'#101215':'#fff')+'" title="'+esc(p.name+': '+KB.kc(p.v))+'">'+(big?KB.tis(p.v):'')+'</div>';});
+    h+='</div></div>';
+  });
+  h+='</div><div class="cnames">'+items.map(it=>'<span>'+esc(it.label)+'</span>').join('')+'</div>';
+  return h;
+}
+/* ---------- vodorovné pruhy (HTML) ---------- */
+function hbars(rows,o){
+  o=o||{};
+  const vals=rows.map(r=>r.v),mx=Math.max(1,...vals,0),mn=Math.min(0,...vals),span=mx-mn||1;
+  const pos=v=>((v-mn)/span*100);
+  const zero=pos(0);
+  let h='<div class="items" style="gap:14px">';
+  let first=true;
+  rows.forEach(r=>{
+    const lab=first&&!r.today;if(lab)first=false;
+    const a=r.v>=0?zero:pos(r.v),b=r.v>=0?pos(r.v):zero;
+    const mark=r.best?'◆ ':(r.v<0?'▼ ':'');
+    h+='<div class="hb'+(lab?' f':'')+'"><span class="nm"'+(r.bold?' style="font-weight:700;color:var(--ink)"':'')+'>'+esc(r.label)+'</span><div class="tr">'
+      +(mn<0?'<span class="zero" style="left:'+zero.toFixed(2)+'%"></span>':'')
+      +'<i class="'+(r.v<0?'neg':'')+'" style="left:'+a.toFixed(2)+'%;width:'+Math.max(.6,b-a).toFixed(2)+'%;'+(r.v<0?'':'background:'+(r.color||COL.pmt))+'"></i>'
+      +(o.today!=null&&!r.today?'<span class="today" style="left:'+pos(o.today).toFixed(2)+'%"></span>':'')
+      +'</div><b'+(r.v<0?' class="neg"':'')+'>'+mark+KB.kc(r.v)+'</b></div>';
+  });
+  return h+'</div>';
+}
+return {esc,COL,sankey,flowTable,stackedCols,hbars};
+});

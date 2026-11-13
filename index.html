@@ -1,31 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="cs">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kalkulačka bydlení – demo pro poradce</title>
-  <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kalkulačka bydlení</title>
+<meta name="description" content="Demo kalkulačka bydlení a hypotéky pro finanční poradce. Fiktivní data, počítá se jen v prohlížeči.">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><strong>Kalkulačka bydlení</strong><span>demo pro finanční poradce</span></div>
-    <div class="demo-note" role="note"><span class="pill-demo">DEMO</span> Orientační výpočet, ne nabídka banky. Fiktivní data – nezadávejte skutečné údaje klientů. Data zůstávají jen v tomto prohlížeči.</div>
-  </header>
-  <div class="app">
-    <aside id="rail" aria-label="Klienti"></aside>
-    <main id="center" aria-label="Zadání">
-      <div id="toggles"></div>
-      <nav id="tabs" role="tablist" aria-label="Sekce formuláře"></nav>
-      <div id="forms"></div>
-    </main>
-    <section id="results" aria-label="Výsledky" aria-live="polite"></section>
-  </div>
-  <div id="toast" class="toast" role="alert"></div>
-  <noscript>Aplikace vyžaduje JavaScript.</noscript>
-  <script src="js/calc.js"></script>
-  <script src="js/store.js"></script>
-  <script src="js/charts.js"></script>
-  <script src="js/ui.js"></script>
+<div id="app"></div>
+<div id="scrim"></div>
+<div id="dd" role="dialog" aria-label="Výběr klienta"></div>
+<aside id="panel" aria-label="Úprava varianty" aria-hidden="true"></aside>
+<div id="dlg" class="dlg"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px">Kalkulačka potřebuje zapnutý JavaScript. Data zůstávají jen ve vašem prohlížeči.</p></noscript>
+<script src="js/model.js"></script>
+<script src="js/store.js"></script>
+<script src="js/derive.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>

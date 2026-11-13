@@ -1,55 +1,36 @@
-# Kalkulačka bydlení – demo pro finanční poradce
+# Kalkulačka bydlení – demo pro finančního poradce
 
-Webová kalkulačka bydlení a hypotéky pro finanční poradkyni. Poradkyně si vede více klientů vedle sebe, u každého zapíná situace přepínači a čísla vidí hned po zadání.
+Demonstrační nástroj: více klientů, u každého stávající byt a až 6 kandidátních bytů srovnávaných s „Dnes“, přepínače situací (prodej / pronájem / refixace / koupě) a výsledky hned po zadání.
 
-> **DEMO. Orientační výpočet, ne nabídka banky.** Všechna data v repozitáři jsou vymyšlená. Do aplikace nezadávejte skutečné údaje klientů.
-
-## Co umí
-
-- **Více klientů**, každý s vlastním profilem. Mezi klienty se přepíná v levém panelu.
-- **Přepínače situací** (mění formuláře i výstupy): mám stávající byt, stávající hypotéka, končí fixace, prodat stávající byt, pronajímat stávající byt (daň A/B/C), koupit nový byt, roční výdaje. Prodej a pronájem se vylučují.
-- **Domácnost:** příjmy, měsíční výdaje a roční jednorázové výdaje (rozepsané položky), úspory.
-- **Až 6 variant nového bytu** u jednoho klienta: cena, rekonstrukce rozepsaná do položek, financování z úspor, hypotéka, dvě pojištění hypotéky (starý byt prodán / ponechán), provozní náklady.
-- **Srovnání variant** v tabulce a ve třech grafech (měsíční náklady na bydlení, volné cashflow, financování). Každý graf má i tabulkový pohled.
-- **Refixace** stávající hypotéky: splátka po konci fixace za novou sazbu.
-- **Data jen lokálně** (localStorage). Záloha a přenos přes export a import JSON. Žádný server, žádné přihlášení.
-
-Optimalizováno pro displeje od Full HD (1920 × 1080). Mobil se nepodporuje.
+**Všechna data jsou fiktivní. Výpočet je orientační, ne nabídka banky.**
 
 ## Spuštění
-
-Čisté HTML, CSS a JS bez build nástrojů. Otevřete `index.html` v prohlížeči, nebo nasaďte na GitHub Pages.
-
-```
-node tests/run.js        # kontrolní příklady v Node
-tests/tests.html         # totéž v prohlížeči
-python3 docs/overeni-hodnot.py   # nezávislý přepočet očekávaných hodnot
-```
-
-## Známá omezení výpočtů
-
-| Oblast | Omezení |
-|---|---|
-| Daň z pronájmu (A paušál, B skutečné výdaje, C výdaje + odpisy) | Zjednodušený model, daňový poradce ho neověřil. Nepočítá slevy na poplatníka, zaokrouhlování základu ani sazbu 23 %. Ztráta se nezohledňuje. |
-| Daň z prodeje bytu | Jen příznak „osvobozeno / zdaněno“ (15 % ze zisku). Podmínky osvobození musí posoudit poradce. |
-| Pojištění hypotéky | Pevná částka zadaná ručně, nepřepočítává se podle výše úvěru. |
-| LTV, splátky / příjem | Orientační ukazatele, ne bankovní posouzení. |
-| Refinancování | Neumí se, jen refixace u stejné banky. |
-| Ověření | Výpočty nejsou nezávisle ověřené. Kontrolní příklady dokazují shodu kódu se vzorci, ne právní správnost modelu. |
+- Otevřete `index.html` v prohlížeči (bez serveru, bez instalace, bez externích knihoven či fontů).
+- Testy: `node tests/run.js` (57 testů modelu, importu, uložení, grafů, kontrola soukromí).
+- Prohlížečový test: `python3 tests/e2e.py` (Playwright + Chromium; živý přepočet, fokus, přepínače, export/import, režim pro klienta).
+- Nezávislé ověření čísel: `python3 docs/overeni-hodnot.py` (Decimal, porovnáno s testy).
 
 ## Struktura
+- `js/model.js` – výpočty (anuita, refixace, LTV, DSTI, prodej s daní, daň z pronájmu varianty A/B/C, scénáře).
+- `js/store.js` – localStorage (`kalkulacka-bydleni-demo-v1`), export/import JSON, ukázkoví klienti.
+- `js/derive.js` – odvozené texty a hodnoty pro obrazovky. `js/charts.js` – SVG/HTML grafy (Sankey, sloupce, pruhy).
+- `js/app.js` – 13 obrazovek, boční panel, režim pro klienta. `styles.css` – tokeny a komponenty (paleta Okabe–Ito, šrafování místo samotné barvy).
 
-| Soubor | Obsah |
-|---|---|
-| `index.html`, `styles.css` | rozhraní |
-| `js/calc.js` | čistá výpočetní logika (bez DOM, testovatelná v Node) |
-| `js/store.js` | datový model, fiktivní ukázková data, localStorage, export a import JSON |
-| `js/charts.js` | vlastní SVG grafy, bez knihoven a bez CDN |
-| `js/ui.js` | vykreslování a formuláře |
-| `tests/`, `docs/` | kontrolní příklady a jejich nezávislé ověření |
+## Data a soukromí
+Data zůstávají jen v prohlížeči (localStorage). Nic se neodesílá. Zálohu a přenos řeší export/import JSON (jeden klient nebo všichni; import vždy přidává, nic nepřepisuje). Poškozená data se uloží do `…-poskozena` a načte se ukázka.
 
-## Co zatím chybí
+## Známá omezení (neskrýváme)
+- Daň z pronájmu A/B/C je zjednodušená; pojištění hypotéky je pevná částka; LTV/DSTI jsou informativní, bez bankovních limitů.
+- Export PNG/PDF je zatím neaktivní zástupce; žádné mobilní rozložení (cíl Full HD, použitelné od 1366 px).
+- Při 1280 px přetéká přehled o cca 7 px (není cílová šířka).
 
-- Export grafů (PNG/PDF) a sdílení. Poslání e-mailem z webu bez serveru nejde, poradkyně si stažený soubor pošle sama.
-- Měsíční časová osa („jak to bude za X měsíců“).
-- Refinancování, tmavý režim, mobilní rozložení.
+## Odchylky od předlohy
+- Zvýraznění shody v „Nemovitosti − dluhy“ označí scénáře 2 i 3 (předloha jen 2).
+- Přehled prázdného klienta (Jana) ukazuje Prodej + Upozornění jen při ≥ 4 upozorněních.
+- Prázdný ukázkový klient je řazen poslední (aktualizován před 7 dny, ne „před 10 min“).
+- Tlačítko „Upravit klienta“ chybí (hlavička: Exportovat + Prezentovat).
+
+## Otevřené otázky z předlohy (použit výchozí návrh)
+1 nájem u klienta bez bytu · 2 základ LTV · 3 splacení hypotéky při prodeji · 4 dělení výtěžku prodeje · 5 limit DSTI · 6 sazba daně 15/23 % a odpis v prvním roce · 7 scénář „ponechat prázdný“. Podrobnosti viz README předlohy; změna je vždy v `js/model.js`.
+
+Kontrolní příklady: `docs/KONTROLNI-PRIKLADY.md`.
