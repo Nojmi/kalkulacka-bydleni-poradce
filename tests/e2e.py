@@ -44,7 +44,7 @@ with sync_playwright() as p:
     check(pg.evaluate("window.__KB.S.clients.find(c=>c.name==='Novákovi').variants[0].price") == 5900000, 'změna přežije obnovení stránky (localStorage)')
     # Tab přeskakuje názvy položek
     pg.evaluate("location.hash='#prijmy'"); pg.wait_for_timeout(200)
-    pg.click('input[data-f="incomes.0.amount"]'); pg.keyboard.press('Tab'); pg.keyboard.press('Tab')
+    pg.click('input[data-f="incomes.0.amount"]'); pg.wait_for_timeout(300); pg.keyboard.press('Tab'); pg.wait_for_timeout(150); pg.keyboard.press('Tab'); pg.wait_for_timeout(150)
     check(pg.evaluate('document.activeElement.dataset.f') == 'incomes.1.amount', 'Tab přeskakuje názvy položek (částka → × → další částka)')
     # přepínače
     pg.click('.trow:has-text("Prodat stávající byt") .tg')

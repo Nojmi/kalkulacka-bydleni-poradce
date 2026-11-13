@@ -454,7 +454,7 @@ function viewByt(c,r){
       +'<div class="mut" style="font-size:13px">Zisk '+kc(S_.gain)+(f.sale.exempt?' je osvobozen od daně.':', daň 15 % ze zisku '+kc(S_.tax)+'.')+' Splácí se dnešní zůstatek hypotéky.</div></div>';
   }
   if(!T.rent&&!T.sell)right+='<div class="card"><h2>Byt zůstává prázdný</h2><p class="mut" style="margin-top:8px">Klient platí splátku, pojištění a provoz starého bytu '+kc(r.oldNet)+' měsíčně navíc k novému bydlení. Vyberte Prodat nebo Pronajímat, pokud to chce porovnat.</p></div>';
-  return '<div class="page">'+head+'<div class="two">'+left+'<div class="stk">'+right+'</div></div></div>';
+  return '<div class="page cap">'+head+'<div class="two">'+left+'<div class="stk">'+right+'</div></div></div>';
 }
 
 /* ---------- příjmy a výdaje ---------- */
@@ -473,7 +473,7 @@ function viewPrijmy(c,r){
   const ann=t.annual?'<div class="card fc"><div class="hd"><b>Roční jednorázové výdaje</b><span class="sum">'+kc(r.annualY)+' / rok</span></div>'+itemList('annual')+'<div class="mut" style="font-size:13px">÷ 12 = '+kc(r.annualM)+' měsíčně, započítává se do výdajů</div></div>':'';
   const sk=incomeSankey(c,r,640,360);
   const flow='<div class="card"><div class="rowb"><h2>Kam jde příjem</h2><span class="mut" style="font-size:13px">Kč měsíčně · dnes</span></div><div style="margin-top:10px">'+(r.income>0?sk.svg:'<p class="mut">Zadejte příjem, diagram se ukáže hned.</p>')+'</div></div>';
-  return '<div class="page"><div class="head"><div class="t"><h1 class="h1 m">Příjmy a výdaje</h1><span class="sub">Společné pro všechny varianty. Tab přeskakuje mezi částkami, názvy položek jsou přepsatelné.</span></div></div>'
+  return '<div class="page cap"><div class="head"><div class="t"><h1 class="h1 m">Příjmy a výdaje</h1><span class="sub">Společné pro všechny varianty. Tab přeskakuje mezi částkami, názvy položek jsou přepsatelné.</span></div></div>'
    +'<div class="three"><div class="stk">'+client+sit+'</div><div class="stk">'+inc+exp+'</div><div class="stk">'+ann+flow+'</div></div></div>';
 }
 
@@ -501,8 +501,7 @@ function viewWiz(c,r){
     sub='Názvy jsou předvyplněné a přepsatelné, stačí doplnit částky.';
     const ann=t.annual?'<div class="card fc"><div class="hd"><b>Roční jednorázové výdaje</b><span class="sum">'+kc(r.annualY)+' / rok</span></div>'+itemList('annual')+'<div class="mut" style="font-size:13px">÷ 12 = '+kc(r.annualM)+' měsíčně</div></div>':'';
     body='<div class="three"><div class="stk"><div class="card fc"><div class="hd"><b>Výdaje domácnosti</b><span class="sum">'+kc(r.exp)+' / měs.</span></div>'+itemList('expenses')+'</div></div>'
-      +'<div class="stk"><div class="card"><div class="trow">'+tg('tAnnual',t.annual,'Roční jednorázové výdaje')+'<span>Roční jednorázové výdaje</span><span class="hint">pojištění, dovolená, poplatky…</span></div></div>'+ann+'</div>'
-      +'<div class="stk"><div class="card"><h2>Kam jde příjem</h2><div style="margin-top:10px">'+(r.income>0?incomeSankey(c,r,520,320).svg:'<p class="mut">Zadejte příjem v kroku 1, diagram se ukáže hned.</p>')+'</div></div></div></div>';
+      +'<div class="stk"><div class="card"><div class="trow">'+tg('tAnnual',t.annual,'Roční jednorázové výdaje')+'<span>Roční jednorázové výdaje</span><span class="hint">pojištění, dovolená, poplatky…</span></div></div>'+ann+'<div class="card"><h2>Kam jde příjem</h2><div style="margin-top:10px">'+(r.income>0?incomeSankey(c,r,520,320).svg:'<p class="mut">Zadejte příjem v kroku 1, diagram se ukáže hned.</p>')+'</div></div></div></div>';
   }else if(st===2){
     sub='Podle toho se ukážou formuláře. Co klient nemá, vypněte.';
     const tr=(act,on,label,cls,hint)=>'<div class="trow '+(cls||'')+'">'+tg(act,on,label)+'<span>'+label+'</span>'+(hint?'<span class="hint">'+hint+'</span>':'')+'</div>';
@@ -510,7 +509,7 @@ function viewWiz(c,r){
       +tr('tFlat',t.flat,'Má stávající byt')
       +(t.flat?tr('tMort',t.mort,'Stávající hypotéka','l1')+(t.mort?tr('tFix',t.fix,'Končí fixace','l2'):'')+tr('tSell',t.sell,'Prodat stávající byt','l1','vylučuje se s pronájmem')+tr('tRent',t.rent,'Pronajímat stávající byt','l1'):'')
       +tr('tBuy',t.buy,'Koupit nový byt')+'</div></div>';
-    if(t.flat){const fc=flatCards(c,r);body='<div class="three"><div class="stk">'+sit+'</div><div class="stk">'+fc.opsC+fc.mortC+fc.fixC+'</div><div class="stk">'+fc.useC+(!t.sell&&!t.rent?'<div class="card"><h2>Byt zůstane prázdný</h2><p class="mut" style="margin-top:8px">Zapněte Prodat nebo Pronajímat, pokud to klient zvažuje.</p></div>':'')+'</div></div>';}
+    if(t.flat){const fc=flatCards(c,r);body='<div class="three"><div class="stk">'+sit+fc.useC+(!t.sell&&!t.rent?'<div class="card"><h2>Byt zůstane prázdný</h2><p class="mut" style="margin-top:8px">Zapněte Prodat nebo Pronajímat, pokud to klient zvažuje.</p></div>':'')+'</div><div class="stk">'+fc.opsC+fc.mortC+fc.fixC+'</div></div>';}
     else body='<div class="three"><div class="stk">'+sit+'</div><div class="stk"><div class="card"><h2>Bez stávajícího bytu</h2><p class="mut" style="margin-top:8px">Klient nemá co prodat ani pronajmout. Pokračujte na varianty nového bytu.</p></div></div><div class="stk"></div></div>';
   }else{
     sub='Přidejte byty, které klient zvažuje. Výsledky se počítají hned po zadání ceny.';
