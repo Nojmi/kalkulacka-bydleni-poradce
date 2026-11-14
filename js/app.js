@@ -87,7 +87,27 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const NOTE='<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Nezadávejte skutečné údaje klientů</span><span>Daň z pronájmu je zjednodušený, neověřený model</span><span>Pojištění hypotéky je pevná, ručně zadaná částka</span></div>';
+const NOTE='<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>';
+/* ⓘ „jak se to spočítalo“: bublina na najetí myší i na fokus z klávesnice */
+function tip(t,right){return '<span class="tip'+(right?' r':'')+'" tabindex="0" role="note" aria-label="Jak se to spočítalo: '+esc(t)+'">ⓘ<span class="tb" role="tooltip">'+esc(t)+'</span></span>';}
+const TIPS={
+ inc:'Součet všech měsíčních příjmů z kroku Příjmy a výdaje.',
+ exp:'Měsíční výdaje domácnosti plus roční jednorázové výdaje děleno 12. Bydlení (splátka, pojištění, provoz bytu) v nich není, počítá se zvlášť.',
+ sav:'Úspory k dispozici. Lze je použít na rekonstrukci nebo na snížení hypotéky nového bytu.',
+ housNow:'Splátka stávající hypotéky (dnešní, nebo po refixaci podle volby) plus pojištění hypotéky plus provoz bytu.',
+ freeNow:'Příjem minus výdaje domácnosti (včetně ročních ÷ 12) minus bydlení měsíčně.',
+ housVar:'Splátka nové hypotéky plus pojištění plus provoz nového bytu. Když klient starý byt nechává, přičte se jeho splátka, pojištění a provoz po odečtu čistého nájmu.',
+ freeVar:'Příjem minus výdaje domácnosti (včetně ročních ÷ 12) minus bydlení měsíčně v této variantě.',
+ scHous:'Bydlení v tomto scénáři: splátky, pojištění a provoz bytů po odečtu čistého nájmu, pokud se byt pronajímá.',
+ scFree:'Příjem minus výdaje domácnosti minus bydlení v tomto scénáři.',
+ scYear:'12 × měsíčně. U scénářů po refinancování platí nová splátka až po konci fixace, první rok proto vychází o něco jinak (viz graf nahoře).',
+ rentTax:'Daň 15 % ze základu. A: paušál 30 % z příjmu, nejvýš 600 000 Kč. B: provoz, opravy a úroky z hypotéky. C: jako B plus odpisy 3,4 % z pořizovací ceny. Zjednodušený, neověřený model, výslednou daň ověřte s daňovým poradcem.',
+ rentNet:'Nájem po neobsazenosti, provozu, opravách a dani, od toho splátka a pojištění starého bytu. Kladné číslo znamená, že nájem pokryje náklady na starý byt.',
+ sale:'Odhadní cena minus provize, náklady prodeje, daň 15 % ze zisku (pokud není osvobozen) a splacení dnešního zůstatku hypotéky.',
+ ins:'Pojištění hypotéky je pevná, ručně zadaná částka. Aplikace ji nepočítá z rizik ani z výše úvěru.',
+ ltv:'Dluh dělený cenou bytu. Nad 80 % upozorní, nad 90 % ukáže riziko.',
+ dsti:'Splátky hypoték dělené příjmem domácnosti.'
+};
 
 /* ---------- domů ---------- */
 function viewHome(){
@@ -109,7 +129,7 @@ function viewHome(){
   const ch=S.changes||0;
   return '<div class="page"><div class="home"><div><h1>Dobrý den</h1><p class="q">Koho dnes připravujete?</p></div>'
    +'<input class="search" id="homeq" data-f="homeq" placeholder="Hledat klienta podle jména nebo poznámky…" value="'+esc(UI.homeQ)+'" aria-label="Hledat klienta" autocomplete="off">'
-   +'<div class="acts3"><button class="act blk" data-act="newClient"><b>+ Nový klient</b><span>Průvodce ve čtyřech krocích</span></button>'
+   +'<p class="fnote" style="margin:-8px 0 0">Nezadávejte skutečné údaje klientů, aplikace je určená na ukázku s fiktivními daty.</p><div class="acts3"><button class="act blk" data-act="newClient"><b>+ Nový klient</b><span>Průvodce ve čtyřech krocích</span></button>'
    +'<button class="act" data-act="importOpen"><b>Importovat zálohu</b><span>Soubor JSON, nic se nepřepíše</span></button>'
    +'<button class="act" data-act="backup"><b>Zálohovat všechny</b><span>'+(S.lastBackup?'Naposledy '+(days()===0?'dnes':'před '+days()+' '+pl(days(),'dnem','dny','dny')):'Zatím nezálohováno')+', od té doby '+ch+' '+pl(ch,'změna','změny','změn')+'</span></button></div>'
    +'<button class="helpbar" data-act="help"><span class="hi">?</span><span class="ht"><b>Jak aplikace funguje</b><small>Schéma celé aplikace: co zadat, co se počítá a kde co najdete. Pro každého, kdo ji otevře poprvé.</small></span><span class="ar">→</span></button>'
@@ -148,7 +168,7 @@ function dnesCard(c,r,sm){
     if(r.freeNow<0)note='<span class="neg">■ už dnes záporné cashflow</span>';
     else if(low)note='▲ téměř nic nezbývá už dnes';
     else if(T.fix&&r.useFix&&Math.abs(r.pmtFix-r.pmtNow)>=1)note='refixace '+(r.pmtFix>r.pmtNow?'zvedne':'sníží')+' splátku o '+kc(Math.abs(r.pmtFix-r.pmtNow));
-    body='<div><div class="mut" style="font-size:14px">Bydlení měsíčně</div><div class="big">'+kc(r.housingNow)+'</div></div>'+stackBar(rows.filter(x=>!x[3]))+legendRows(rows)+'<hr><div><div class="mut" style="font-size:14px">Zbude měsíčně</div><div class="free'+(r.freeNow<0?' neg':'')+'">'+kc(r.freeNow)+'</div><div class="mut" style="font-size:13.5px;margin-top:4px">'+note+'</div></div>';
+    body='<div><div class="mut" style="font-size:14px">Bydlení měsíčně '+tip(TIPS.housNow)+'</div><div class="big">'+kc(r.housingNow)+'</div></div>'+stackBar(rows.filter(x=>!x[3]))+legendRows(rows)+'<hr><div><div class="mut" style="font-size:14px">Zbude měsíčně '+tip(TIPS.freeNow)+'</div><div class="free'+(r.freeNow<0?' neg':'')+'">'+kc(r.freeNow)+'</div><div class="mut" style="font-size:13.5px;margin-top:4px">'+note+'</div></div>';
   }
   const sub=!T.flat?'Bez vlastního bytu':'Stávající byt, '+(T.sell?'před prodejem':T.fix&&r.useFix?'splátka po refixaci':'dnešní splátka');
   return '<div class="vcard dnes" tabindex="-1"><div><div class="lbl">Výchozí stav</div><div class="ttl" style="margin-top:2px">Dnes</div><div class="mut" style="font-size:13.5px">'+sub+'</div></div>'+body+'</div>';
@@ -169,9 +189,9 @@ function varCard(c,r,i,bestI){
   return '<div class="vcard'+(isBest?' best':'')+'" role="button" tabindex="0" data-act="editVar" data-i="'+i+'" aria-label="Upravit variantu '+esc(v.name)+'">'
    +'<div class="toprow"><span class="lbl">Varianta '+(i+1)+'</span>'+tagTop+'</div>'
    +'<div><div class="ttl">'+esc(v.name)+'</div><div class="mut" style="font-size:13.5px;margin-top:2px">'+kc(v.price)+' · rekonstrukce '+kc(v.reno)+'</div></div>'
-   +'<div><div class="mut" style="font-size:14px">Bydlení měsíčně</div><div class="big">'+kc(v.total)+'</div></div>'
+   +'<div><div class="mut" style="font-size:14px">Bydlení měsíčně '+tip(TIPS.housVar)+'</div><div class="big">'+kc(v.total)+'</div></div>'
    +stackBar(rows)+legendRows(rows)+'<hr>'
-   +'<div><div class="mut" style="font-size:14px">Zbude měsíčně</div><div class="free'+(v.free<0?' neg':'')+'" style="'+(v.free<0?'color:var(--risk)':'')+'">'+kc(v.free)+'</div><div class="mut" style="font-size:13.5px;margin-top:4px">'+kcd(diff).replace('±','±')+' proti dnešku</div></div>'
+   +'<div><div class="mut" style="font-size:14px">Zbude měsíčně '+tip(TIPS.freeVar)+'</div><div class="free'+(v.free<0?' neg':'')+'" style="'+(v.free<0?'color:var(--risk)':'')+'">'+kc(v.free)+'</div><div class="mut" style="font-size:13.5px;margin-top:4px">'+kcd(diff).replace('±','±')+' proti dnešku</div></div>'
    +'<div class="pills" style="margin-top:auto">'+pills.join('')+'</div></div>';
 }
 function warningsPanel(r,wide){
@@ -191,7 +211,7 @@ function flatPanel(c,r){
   const T=r.T,P=r.P,S_=r.S;
   if(T.sell){
     return '<div class="card"><div class="rowb"><h2>Prodej stávajícího bytu</h2><button class="lnk" data-act="nav" data-v="byt">Detail →</button></div><div style="margin-top:6px">'+saleSankey(r,560,230)+'</div>'
-     +'<hr style="margin:10px 0"><div class="rowb"><span><b>= Čistý výtěžek</b> <span class="mut" style="font-size:13px">'+(S_.net<0?'chybějící částku je nutné doplatit':'jde do nového bytu')+'</span></span><b class="'+(S_.net<0?'neg':'')+'" style="font-size:22px">'+(S_.net<0?'▼ ':'')+kc(S_.net)+'</b></div></div>';
+     +'<hr style="margin:10px 0"><div class="rowb"><span><b>= Čistý výtěžek</b> '+tip(TIPS.sale)+' <span class="mut" style="font-size:13px">'+(S_.net<0?'chybějící částku je nutné doplatit':'jde do nového bytu')+'</span></span><b class="'+(S_.net<0?'neg':'')+'" style="font-size:22px">'+(S_.net<0?'▼ ':'')+kc(S_.net)+'</b></div></div>';
   }
   const best=P.best;
   return '<div class="card"><div class="rowb"><h2>Stávající byt'+(T.rent?' v pronájmu':' (ponechaný)')+'</h2><button class="lnk" data-act="nav" data-v="byt">Detail →</button></div><div class="panel-list" style="margin-top:8px">'
@@ -213,7 +233,7 @@ function situationPanel(c,r){
 function viewPrehled(c,r){
   const T=r.T,sm=D.summary(c,r),V=r.V,n=V.length;
   if(D.isEmpty(c,r)||(!n&&T.buy&&!c.variants.length&&r.income<=0))return viewEmpty(c,r);
-  const sumb='<div class="sumbox"><div><small>Příjem</small><b>'+kc(r.income)+'</b></div><div><small>Výdaje domácnosti</small><b>'+kc(r.expTotal)+'</b></div><div><small>Úspory</small><b>'+(r.savings>=1e6?mil(r.savings).replace('mil.','mil. Kč'):kc(r.savings))+'</b></div></div>';
+  const sumb='<div class="sumbox"><div><small>Příjem '+tip(TIPS.inc)+'</small><b>'+kc(r.income)+'</b></div><div><small>Výdaje domácnosti '+tip(TIPS.exp)+'</small><b>'+kc(r.expTotal)+'</b></div><div><small>Úspory '+tip(TIPS.sav,true)+'</small><b>'+(r.savings>=1e6?mil(r.savings).replace('mil.','mil. Kč'):kc(r.savings))+'</b></div></div>';
   const canAdd=n<Store.MAXV&&T.buy;
   let cols,addCard='';
   if(T.buy){
@@ -337,6 +357,36 @@ function chartCard(key,title,graf,tab,extra){
   const mode=UI.charts[key]||'graf';
   return '<div class="card ch"><div class="rowb"><h2>'+title+'</h2><div class="row">'+(extra||'')+seg('chartMode',[['graf','Graf'],['tab','Tabulka']],mode,'',' data-key="'+key+'"')+'</div></div>'+(mode==='graf'?graf:tab)+'</div>';
 }
+function flowSankey(c,r,v,w,h){
+  const T=r.T,nodes=[],links=[];
+  const rentOn=T.flat&&T.rent&&!T.sell,oldOn=T.flat&&!T.sell,P=r.P;
+  const outs=[];
+  if(oldOn){
+    if(T.mort)outs.push(['o1','Splátka staré hypo',r.pmtUsed,COL.pmt]);
+    if(T.mort)outs.push(['o2','Pojištění staré hypo',r.mIns,COL.ins]);
+    outs.push(['o3','Provoz starého bytu',r.flatOps,COL.ops]);
+    if(rentOn){outs.push(['o4','Opravy a drobné',P.rep/12,'#8c939d']);outs.push(['o5','Daň z nájmu',P.tax/12,'#b4bac2']);}
+  }
+  outs.push(['n1','Splátka nové hypo',v.pmt,COL.pmt],['n2','Pojištění nové hypo',v.ins,COL.ins],['n3','Provoz nového bytu',v.ops,COL.ops],['n4','Ostatní výdaje',r.exp,COL.hh]);
+  if(T.annual)outs.push(['n5','Roční výdaje ÷ 12',r.annualM,COL.ann]);
+  const free=v.free;
+  if(free>0)outs.push(['f','Zbývá na spoření',free,COL.sav]);
+  const act=outs.filter(o=>o[2]>0.5);
+  let rent=rentOn?Math.max(0,P.inc/12):0,inc=r.income;
+  const src=[];if(rent>0)src.push({id:'sr',label:'Nájem',left:rent,color:COL.ops});
+  src.push({id:'si',label:'Příjem',left:inc,color:'#3b4048'});
+  const need=act.reduce((a,o)=>a+o[2],0),have=src.reduce((a,x)=>a+x.left,0);
+  if(need>have+0.5)src.push({id:'sm',label:'Chybí',left:need-have,hatch:true,neg:true});
+  src.forEach(x=>nodes.push({id:x.id,col:0,label:x.label,color:x.color,hatch:x.hatch,neg:x.neg,text:x.hatch?NF.format(Math.round(x.left)):undefined}));
+  const fromRent={};
+  act.forEach(o=>{
+    let rest=o[2];
+    src.forEach(x=>{if(rest<=0||x.left<=0)return;const t=Math.min(rest,x.left);x.left-=t;rest-=t;links.push({s:x.id,t:o[0],v:t,color:o[3],hatch:x.hatch});if(x.id==='sr')fromRent[o[0]]=t;});
+    nodes.push({id:o[0],col:1,label:o[1],color:o[3]});
+  });
+  nodes.forEach(n=>{if(n.id[0]==='n'&&fromRent[n.id]>0.5)n.sub='z toho z nájmu '+NF.format(Math.round(fromRent[n.id]))+' Kč';});
+  return {svg:Charts.sankey({width:w,height:h,ml:190,mr:250,nodes,links,aria:'Kam jde příjem'+(rentOn?' a nájem':'')+': '+v.name}),nodes,links};
+}
 function viewGrafy(c,r,pres){
   const T=r.T,V=r.V;
   if(!V.length)return '<div class="page"><div class="head"><div class="t"><h1 class="h1 m">Grafy</h1></div></div><div class="empty">Přidejte aspoň jednu variantu, grafy se ukážou hned.</div></div>';
@@ -354,6 +404,7 @@ function viewGrafy(c,r,pres){
   const gv=Math.min(UI.grafVar,V.length-1);const v=Object.assign({idx:gv},V[gv]);
   const fs=financeSankey(v,r,1700,280);
   const sel=V.length>1?seg('grafVar',V.map((x,i)=>[i,x.name]),gv,''):'';
+  const fl=flowSankey(c,r,v,1700,420);
   const note=T.flat?(T.sell?'Dnes = stávající byt před prodejem':'splátka stávající hypotéky '+(r.useFix?'po refixaci':'dnes')):'';
   const dnesTxt=T.flat?'':'';
   return '<div class="page"><div class="head"><div class="t"><h1 class="h1 m">Grafy</h1><span class="sub">'+esc(c.name)+' · tisíce Kč měsíčně'+(note?', '+note:'')+'</span></div>'+(pres?'':'<span class="exp" title="Připravujeme">Export PNG / PDF · připravujeme</span>')+'</div>'
@@ -361,6 +412,7 @@ function viewGrafy(c,r,pres){
    +chartCard('cost','Měsíční náklady na bydlení',Charts.stackedCols(items,leg),tblMonthly)
    +chartCard('free','Kolik měsíčně zbude',hb,tblFree)
    +'</div>'
+   +chartCard('flow','Kam jde příjem'+(T.flat&&T.rent&&!T.sell?' a nájem':'')+' (měsíčně)',fl.svg,Charts.flowTable({nodes:fl.nodes,links:fl.links}),sel)
    +chartCard('fin','Jak se pořízení financuje',fs.svg,Charts.flowTable({nodes:fs.nodes,links:fs.links}),sel)+'</div>';
 }
 
@@ -382,8 +434,8 @@ function viewScenare(c,r){
     if(s.ltv!=null&&s.ltv>0.8)pills[0]=tag((s.ltv>0.9?'■ ':'▲ ')+'LTV '+pct(s.ltv),s.ltv>0.9?'r':'w');
     return '<div class="vcard'+cl+'" style="cursor:default"><div class="toprow"><span class="lbl">Scénář '+s.n+'</span>'+(bi.has(i)?'<span class="pill a">◆ Nejvíc zbude</span>':'')+'</div>'
       +'<div><div class="ttl" style="min-height:52px">'+s.title+'</div><div class="mut" style="font-size:13.5px;margin-top:4px;min-height:40px">'+esc(D.scenarioText(s,c,s.r))+'</div></div>'
-      +'<div><div class="mut" style="font-size:14px">Zbude měsíčně</div><div class="big'+(s.free<0?' neg':'')+'" style="font-size:38px;'+(bi.has(i)?'color:var(--accd)':s.free<0?'color:var(--risk)':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free)+'</div><div class="mut" style="font-size:13.5px;margin-top:2px">'+kcd(s.free-todayFree)+' proti dnešku</div><div class="yr"><span>Ročně zbude <small>(12 × měsíčně)</small></span><b class="'+(s.free<0?'neg':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free*12)+'</b></div></div><hr>'
-      +'<div class="rowb"><span class="mut" style="font-size:14px">Bydlení měsíčně</span><b style="font-size:20px;font-weight:650">'+kc(s.total)+'</b></div><div style="width:'+w.toFixed(1)+'%">'+stackBar(rows)+'</div>'+legendRows(rows)
+      +'<div><div class="mut" style="font-size:14px">Zbude měsíčně '+tip(TIPS.scFree)+'</div><div class="big'+(s.free<0?' neg':'')+'" style="font-size:38px;'+(bi.has(i)?'color:var(--accd)':s.free<0?'color:var(--risk)':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free)+'</div><div class="mut" style="font-size:13.5px;margin-top:2px">'+kcd(s.free-todayFree)+' proti dnešku</div><div class="yr"><span>Ročně zbude <small>(12 × měsíčně)</small> '+tip(TIPS.scYear)+'</span><b class="'+(s.free<0?'neg':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free*12)+'</b></div></div><hr>'
+      +'<div class="rowb"><span class="mut" style="font-size:14px">Bydlení měsíčně '+tip(TIPS.scHous)+'</span><b style="font-size:20px;font-weight:650">'+kc(s.total)+'</b></div><div style="width:'+w.toFixed(1)+'%">'+stackBar(rows)+'</div>'+legendRows(rows)
       +'<div class="pills" style="margin-top:auto">'+pills.join('')+'</div></div>';
   }).join('');
   const rowsDef=[['Nová hypotéka',s=>s.rows.newMort,'min',v=>v==null?'—':kc(v)],
@@ -420,7 +472,7 @@ function flatCards(c,r){
   const T=r.T,f=c.flat;
   const opsC='<div class="card fc"><div class="hd"><b>Hodnota a provoz</b><span class="sum">'+kc(r.flatOps)+' / měs.</span></div><div class="g2">'+fld('Odhadní cena',numInp('flat.est','Kč',{aria:'Odhadní cena'}))+fld('Pořizovací cena',numInp('flat.purchase','Kč',{aria:'Pořizovací cena'}))+'</div>'
     +'<div class="sec">Provozní náklady · Kč měsíčně</div>'+itemList('flat.ops')+'</div>';
-  const mortC='<div class="card fc"><div class="hd"><b>Hypotéka</b>'+tg('tMort',c.t.mort,'Stávající hypotéka')+'</div>'+(c.t.mort?'<div class="g4">'+fld('Zůstatek',numInp('flat.mort.balance','Kč',{aria:'Zůstatek'}))+fld('Sazba',numInp('flat.mort.rate','%',{kind:'dec',aria:'Sazba'}))+fld('Zbývá',numInp('flat.mort.months','měs.',{aria:'Zbývá měsíců'}))+fld('Pojištění',numInp('flat.mort.ins','Kč',{aria:'Pojištění'}))+'</div>':'')+'</div>';
+  const mortC='<div class="card fc"><div class="hd"><b>Hypotéka</b>'+tg('tMort',c.t.mort,'Stávající hypotéka')+'</div>'+(c.t.mort?'<div class="g4">'+fld('Zůstatek',numInp('flat.mort.balance','Kč',{aria:'Zůstatek'}))+fld('Sazba',numInp('flat.mort.rate','%',{kind:'dec',aria:'Sazba'}))+fld('Zbývá',numInp('flat.mort.months','měs.',{aria:'Zbývá měsíců'}))+fld('Pojištění '+tip(TIPS.ins,true),numInp('flat.mort.ins','Kč',{aria:'Pojištění'}))+'</div><p class="fnote">Pojištění hypotéky je pevná, ručně zadaná částka.</p>':'')+'</div>';
   const fixC=c.t.mort?'<div class="card fc"><div class="hd"><b>Konec fixace</b>'+tg('tFix',c.t.fix,'Konec fixace')+'</div>'+(c.t.fix?'<div class="g2">'+fld('Fixace končí za',numInp('flat.fix.months','měsíců',{aria:'Fixace končí za'}))+fld('Očekávaná nová sazba',numInp('flat.fix.rate','%',{kind:'dec',aria:'Očekávaná nová sazba'}))+'</div>':'')+'</div>':'';
   let useC='';
   if(T.rent)useC='<div class="card fc"><div class="hd"><b>Pronájem</b></div><div class="g3">'+fld('Nájemné',numInp('flat.rent.rent','Kč/měs.',{aria:'Nájemné'}))+fld('Neobsazenost',numInp('flat.rent.vac','%',{kind:'dec',aria:'Neobsazenost'}))+fld('Opravy a údržba',numInp('flat.rent.repairs','Kč/rok',{aria:'Opravy a údržba'}))+'</div></div>';
@@ -452,12 +504,26 @@ function viewByt(c,r){
     rowsT.forEach(rw=>{tb+='<tr'+(rw[3]?' class="s"':'')+'><td>'+esc(rw[0])+'</td>'+rw[1].map((v,i)=>{const x=cols[i];const isTax=rw[0]==='Daň 15 %';const b=isTax&&P.best===x&&D.bestSet([P.taxA,P.taxB,P.taxC],'min').size>0;return '<td'+(P.sel===x?' class="u"':'')+(v==null?' class="zz"':'')+'>'+(v==null?'—':b?'<span class="bv">'+NF.format(Math.round(v))+'</span>':(rw[2]&&v>0?'−':'')+NF.format(Math.round(v)))+'</td>';}).join('')+'</tr>';});
     tb+='</tbody></table>';
     const diffTax=P.tax-P['tax'+P.best];
-    right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Pronájem: daň krok za krokem</b><span class="row"><span class="mut" style="font-size:13px">Použít</span>'+seg('taxsel',[['A','A'],['B','B'],['C','C']],P.sel)+'</span></div>'+tb
-      +'<div class="g3"><div class="tile"><small>Daň ročně · varianta '+P.sel+'</small><b>'+kc(P.tax)+'</b><span>'+(diffTax>0.5?'varianta '+P.best+' vychází o '+kc(diffTax)+' nižší':'nejnižší z variant')+'</span></div><div class="tile"><small>Čistý příjem z nájmu</small><b>'+kc(P.netM)+' / měs.</b><span>po neobsazenosti, provozu, opravách a dani</span></div><div class="tile"><small>Starý byt po odečtu nájmu</small><b>'+kc(r.oldNet)+' / měs.</b><span>splátka + pojištění + provoz − čistý nájem</span></div></div></div>';
+    const occ=Math.round((12-12*(+f.rent.vac||0)/100)*10)/10;
+    const lv=[];let lvl=0;
+    const wf=[['Nájem za měsíc',P.gross/12,'tot'],['Neobsazenost (obsazeno '+NF2.format(occ)+' měsíců z 12)',-P.vacLoss/12],['Provoz bytu (poplatky SVJ, které platí vlastník)',-r.flatOps],['Opravy a drobné náklady',-P.rep/12],['Daň z nájmu ('+P.sel+')',-P.tax/12],['Příjem z pronájmu po nákladech',P.netM,'sub'],['Splátka hypotéky starého bytu',-r.pmtUsed],['Pojištění hypotéky '+tip(TIPS.ins),-r.mIns],['Pronájem '+(P.netM-r.pmtUsed-r.mIns>=0?'ti měsíčně přispívá':'měsíčně doplácíš')+' '+tip(TIPS.rentNet),P.netM-r.pmtUsed-r.mIns,'tot']];
+    let lo=0,hi=P.gross/12;let t=0;wf.forEach(w=>{if(w[2]){t=w[1];}else t+=w[1];lo=Math.min(lo,t);hi=Math.max(hi,t);});
+    const rng=(hi-lo)||1;let lev=0;
+    const rowsW=wf.map(w=>{let a,b;if(w[2]){a=0;b=w[1];lev=w[1];}else{a=lev;b=lev+w[1];lev=b;}
+      const l=((Math.min(a,b)-lo)/rng*100),wd=Math.max(.8,Math.abs(b-a)/rng*100),neg=!w[2]&&w[1]<0,bad=w[2]==='tot'&&w[1]<0&&w[0].startsWith('Pronájem');
+      const v=w[2]?(bad?'▼ ':'')+kc(w[1]):(Math.abs(w[1])<0.5?'0 Kč':'−'+kc(Math.abs(w[1])));
+      return '<div class="wr'+(w[2]?' b':'')+'"><span class="wl">'+(w[0].indexOf('<span')>=0?w[0]:esc(w[0]))+'</span><span class="wt"><i class="'+(w[2]?(w[1]<0?'ng':'ps'):'mn')+'" style="left:'+l.toFixed(2)+'%;width:'+wd.toFixed(2)+'%"></i></span><span class="wv'+((bad||(w[2]==='tot'&&w[1]<0))?' neg':'')+'">'+v+'</span></div>';}).join('');
+    const refTab=(T.mort&&T.fix)?'<table class="tx rf"><colgroup><col class="c0"><col><col></colgroup><thead><tr><th>Hypotéka starého bytu po refixaci</th><th>Měsíčně</th><th>Ročně</th></tr></thead><tbody>'
+      +[['Splátka hypotéky',-r.pmtFix],['Pojištění hypotéky',-r.mIns],['Příjem z pronájmu po nákladech',P.netM]].map(x=>'<tr><td>'+x[0]+'</td><td>'+(x[1]<0?'−':'')+kc(Math.abs(x[1]))+'</td><td>'+(x[1]<0?'−':'')+kc(Math.abs(x[1])*12)+'</td></tr>').join('')
+      +'<tr class="s tot"><td>Pronájem '+(P.netM-r.pmtFix-r.mIns>=0?'ti měsíčně přispívá':'měsíčně doplácíš')+'</td><td>'+kc(P.netM-r.pmtFix-r.mIns)+'</td><td>'+kc((P.netM-r.pmtFix-r.mIns)*12)+'</td></tr></tbody></table>':'';
+    right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Pronájem starého bytu</b><span class="mut" style="font-size:13px">splátka '+(r.useFix?'po refixaci':'dnešní')+'</span></div><div class="mut" style="font-size:13.5px">Od měsíčního nájmu k tomu, co skutečně zbude.</div><div class="wf">'+rowsW+'</div>'+refTab
+      +'<p class="fnote">Daň a úroky počítají se zjednodušeným, neověřeným modelem a s dnešním zůstatkem hypotéky. Pojištění hypotéky je pevná, ručně zadaná částka.</p></div>';
+    right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Pronájem: daň krok za krokem '+tip(TIPS.rentTax)+'</b><span class="row"><span class="mut" style="font-size:13px">Použít</span>'+seg('taxsel',[['A','A'],['B','B'],['C','C']],P.sel)+'</span></div>'+tb
+      +'<p class="fnote">Daň z pronájmu je zjednodušený, neověřený model. Úroky a odpisy jsou odhad, výslednou daň ověřte s daňovým poradcem.</p><div class="g3"><div class="tile"><small>Daň ročně · varianta '+P.sel+'</small><b>'+kc(P.tax)+'</b><span>'+(diffTax>0.5?'varianta '+P.best+' vychází o '+kc(diffTax)+' nižší':'nejnižší z variant')+'</span></div><div class="tile"><small>Čistý příjem z nájmu</small><b>'+kc(P.netM)+' / měs.</b><span>po neobsazenosti, provozu, opravách a dani</span></div><div class="tile"><small>Starý byt po odečtu nájmu</small><b>'+kc(r.oldNet)+' / měs.</b><span>splátka + pojištění + provoz − čistý nájem</span></div></div></div>';
   }
   if(T.sell){
     const S_=r.S;
-    right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Prodej: rozpad ceny</b></div>'+saleSankey(r,900,280)
+    right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Prodej: rozpad ceny '+tip(TIPS.sale)+'</b></div>'+saleSankey(r,900,280)
       +'<hr><div class="rowb"><span><b>= Čistý výtěžek</b> <span class="mut" style="font-size:13px">'+(S_.net<0?'chybějící částku je nutné doplatit':'jde do nového bytu')+'</span></span><b class="'+(S_.net<0?'neg':'')+'" style="font-size:24px">'+(S_.net<0?'▼ ':'')+kc(S_.net)+'</b></div>'
       +'<div class="mut" style="font-size:13px">Zisk '+kc(S_.gain)+(f.sale.exempt?' je osvobozen od daně.':', daň 15 % ze zisku '+kc(S_.tax)+'.')+' Splácí se dnešní zůstatek hypotéky.</div></div>';
   }
@@ -560,7 +626,7 @@ function viewWiz(c,r){
   let body='',title=WSTEPS[st][0],sub='';
   if(st===0){
     sub='Vyplňte, co už víte. Cokoli můžete nechat prázdné a doplnit později.';
-    body='<div class="three"><div class="stk"><div class="card fc"><b style="font-size:17px">Klient</b>'+fld('Jméno',txtInp('name',{aria:'Jméno klienta',ph:'např. Novákovi'}))
+    body='<div class="three"><div class="stk"><div class="card fc"><b style="font-size:17px">Klient</b>'+fld('Jméno',txtInp('name',{aria:'Jméno klienta',ph:'např. Novákovi'}))+'<p class="fnote">Nezadávejte skutečné údaje klientů, pište vymyšlená jména a částky.</p>'
       +fld('Poznámka','<label class="inp ta"><textarea rows="2" data-f="note" data-k="text" aria-label="Poznámka">'+esc(c.note||'')+'</textarea></label>')+fld('Úspory k dispozici',numInp('savings','Kč',{aria:'Úspory k dispozici'}))+'</div></div>'
       +'<div class="stk"><div class="card fc"><div class="hd"><b>Měsíční příjmy</b><span class="sum">'+kc(r.income)+'</span></div>'+itemList('incomes')+'</div></div><div class="stk"></div></div>';
   }else if(st===1){
@@ -614,7 +680,7 @@ function renderPanel(){
      +'<div><div class="rowb" style="font-size:13px"><span class="mut">Čerpání úspor</span><b class="'+(over?'neg':'')+'">'+(over?'▲ ':'')+kc(used)+' z '+kc(r.savings)+'</b></div><div class="use'+(over?' over':'')+'" style="margin-top:6px" role="img" aria-label="Čerpání úspor"><i style="width:'+Math.min(100,r.savings>0?used/r.savings*100:(used>0?100:0)).toFixed(1)+'%"></i></div></div>'
      +(r.T.sell&&x.proceeds>0?'<div class="mut" style="font-size:13px">Z prodeje stávajícího bytu jde do hypotéky '+kc(x.proceeds)+'.</div>':'')
      +'<div class="g2">'+fld('Sazba',numInp(p+'rate','%',{kind:'dec',aria:'Sazba',panel:1}))+fld('Doba',seg('years',years.map(y=>[y,y+' let']),+v.years,'lg'))+'</div>')
-   +acc('ins','Pojištění a provoz',kc(insTxt)+' / měs.','<div class="g2">'+fld('Pojištění hypotéky'+(r.T.flat&&!r.T.sell?' (starý byt prodán / žádný)':''),numInp(p+'insSold','Kč',{aria:'Pojištění hypotéky',panel:1}))+(r.T.flat&&!r.T.sell?fld('Pojištění při ponechání starého bytu',numInp(p+'insKept','Kč',{aria:'Pojištění při ponechání bytu',panel:1})):'')+'</div>'
+   +acc('ins','Pojištění a provoz',kc(insTxt)+' / měs.','<div class="g2">'+fld('Pojištění hypotéky'+(r.T.flat&&!r.T.sell?' (starý byt prodán / žádný)':''),numInp(p+'insSold','Kč',{aria:'Pojištění hypotéky',panel:1}))+(r.T.flat&&!r.T.sell?fld('Pojištění při ponechání starého bytu',numInp(p+'insKept','Kč',{aria:'Pojištění při ponechání bytu',panel:1})):'')+'</div><p class="fnote">Pojištění hypotéky je pevná, ručně zadaná částka, aplikace ji nepočítá z rizik.</p>'
      +'<div class="ren">'+v.ops.map((it,i)=>'<div class="fld"><span class="k">'+esc(it.label)+'</span>'+numInp(p+'ops.'+i+'.amount','Kč',{aria:it.label,panel:1})+'</div>').join('')+'</div>')
    +'</div>';
   const foot='<div class="pf"><div class="live"><small>Živě · zbude měsíčně</small><b class="'+(x.free<0?'neg':'')+'">'+(x.free<0?'▼ ':'')+kc(x.free)+'</b></div><div class="kv"><span>Bydlení</span><b>'+kc(x.total)+'</b></div><div class="kv"><span>LTV</span><b>'+pct(x.ltv)+'</b></div><div class="sp"></div><button class="btn blk" data-act="closePanel">Hotovo</button></div>';
@@ -782,6 +848,7 @@ A.taxsel=t=>{cur().flat.rent.tax=t.dataset.v;persist(true);};
 A.useRefix=t=>{cur().useRefix=t.dataset.v==='1';persist(true);};
 
 document.addEventListener('click',e=>{
+  if(e.target.closest('.tip')){e.stopPropagation();return;}
   const t=e.target.closest('[data-act]');
   if(!t){
     if(UI.dd&&!e.target.closest('#dd')){UI.dd=false;render();}

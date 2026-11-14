@@ -56,7 +56,7 @@ function sankey(o){
     let over=(arr.length?arr[arr.length-1].y:0)-(H-6);if(over>0){let nxt=1e9;for(let i=arr.length-1;i>=0;i--){arr[i].y=Math.min(arr[i].y-Math.max(0,over),nxt-15);nxt=arr[i].y;}}};
   spread(L);spread(R);
   L.forEach(a=>{s+='<text x="'+(a.n.x-8)+'" y="'+(a.y+4).toFixed(1)+'" text-anchor="end"'+(a.n.neg?' class="neg"':'')+'>'+a.txt+'</text>';});
-  R.forEach(a=>{s+='<text x="'+(a.n.x+nw+8)+'" y="'+(a.y+4).toFixed(1)+'"'+(a.n.neg?' class="neg"':'')+'>'+a.txt+'</text>';});
+  R.forEach(a=>{s+='<text x="'+(a.n.x+nw+8)+'" y="'+(a.y+4).toFixed(1)+'"'+(a.n.neg?' class="neg"':'')+'>'+a.txt+(a.n.sub?'<tspan x="'+(a.n.x+nw+8)+'" dy="17" class="sb">'+esc(a.n.sub)+'</tspan>':'')+'</text>';});
   M.forEach(a=>{s+='<text x="'+(a.n.x+nw/2)+'" y="'+(Math.max(10,a.n.y-8)).toFixed(1)+'" text-anchor="middle">'+a.txt+'</text>';});
   return s+'</svg>';
 }

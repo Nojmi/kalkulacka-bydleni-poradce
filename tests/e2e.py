@@ -28,6 +28,13 @@ with sync_playwright() as p:
     pg.click('.cr:has-text("Novákovi")'); pg.wait_for_timeout(200)
     check('Žižkov 3+1' in pg.inner_text('h1'), 'Novákovi: nejlepší varianta Žižkov 3+1')
     check('15 284' in pg.inner_text('.vcard.best').replace('\xa0', ' '), 'Novákovi: zbude 15 284 Kč')
+    pg.hover('.sumbox .tip >> nth=1'); pg.wait_for_timeout(150)
+    check(pg.locator('.sumbox .tip >> nth=1 >> .tb').is_visible() and 'děleno 12' in pg.inner_text('.sumbox .tip >> nth=1 >> .tb'), 'ⓘ u výdajů domácnosti ukáže, jak se číslo spočítalo')
+    pg.goto(URL + '#grafy'); pg.wait_for_timeout(300)
+    check(pg.locator('.card:has-text("Kam jde příjem a nájem") svg').count() == 1, 'graf toků s nájmem je v Grafech')
+    pg.goto(URL + '#byt'); pg.wait_for_timeout(300)
+    check(pg.locator('.wf .wr').count() == 9, 'rozpad nájmu má 9 řádků')
+    pg.goto(URL); pg.wait_for_timeout(300); pg.click('.cr:has-text("Novákovi")'); pg.wait_for_timeout(200)
     # živý přepočet a fokus
     pg.click('.vcard.best'); pg.wait_for_timeout(400)
     pg.click('#panel input[data-f="variants.0.price"]'); pg.keyboard.press('Control+A'); pg.keyboard.type('5900000', delay=15)
