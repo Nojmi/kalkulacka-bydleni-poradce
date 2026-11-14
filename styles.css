@@ -402,3 +402,11 @@ body.pres .note{height:44px;font-size:15px;justify-content:center}
 .wr:not(.b) .wv{color:var(--risk)}
 .tx.rf th:first-child{text-align:left}
 text .sb{font-size:12.5px;fill:#6b7280}
+
+.tip .tb{width:340px;font-variant-numeric:tabular-nums}
+.tb .tt{display:block;font-weight:700;margin-bottom:8px;font-size:13.5px}
+.tb .tr{display:flex;justify-content:space-between;gap:18px;padding:2px 0}
+.tb .tr i{font-style:normal}.tb .tr i:last-child{white-space:nowrap}
+.tb .tot{border-top:1px solid #565d66;margin-top:7px;padding-top:8px;font-weight:700}
+.tb .tn{display:block;margin-top:9px;color:#b5bbc4;font-size:12px;line-height:1.4}
+.tip.l .tb{left:-8px;right:auto;transform:none}
