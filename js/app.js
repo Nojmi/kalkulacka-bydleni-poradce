@@ -411,11 +411,11 @@ function viewGrafy(c,r,pres){
   const note=T.flat?(T.sell?'Dnes = stávající byt před prodejem':'splátka stávající hypotéky '+(r.useFix?'po refixaci':'dnes')):'';
   const dnesTxt=T.flat?'':'';
   return '<div class="page gr"><div class="head"><div class="t"><h1 class="h1 m">Grafy</h1><span class="sub">'+esc(c.name)+' · tisíce Kč měsíčně'+(note?', '+note:'')+'</span></div>'+(sel?'<div class="row"><span class="mut" style="font-size:14px">Varianta v grafech toků</span>'+sel+'</div>':'')+(pres?'':'<span class="exp" title="Připravujeme">Export PNG / PDF · připravujeme</span>')+'</div>'
-   +'<div style="display:grid;grid-template-columns:'+(pres?'1fr':'1.15fr 1fr')+';gap:16px">'
+   +'<div style="display:grid;grid-template-columns:1.15fr 1fr;gap:16px">'
    +chartCard('cost','Měsíční náklady na bydlení',Charts.stackedCols(items,leg),tblMonthly)
    +chartCard('free','Kolik měsíčně zbude',hb,tblFree)
    +'</div>'
-   +'<div style="display:grid;grid-template-columns:'+(pres?'1fr':'1.15fr 1fr')+';gap:16px;align-items:start">'
+   +'<div style="display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start">'
    +chartCard('flow','Kam jde příjem'+(T.flat&&T.rent&&!T.sell?' a nájem':'')+' (měsíčně)',fl.svg,Charts.flowTable({nodes:fl.nodes,links:fl.links}))
    +chartCard('fin','Jak se pořízení financuje',fs.svg,Charts.flowTable({nodes:fs.nodes,links:fs.links}))+'</div></div>';
 }
