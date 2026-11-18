@@ -87,7 +87,7 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const VERSION='2026-11-18.5';
+const VERSION='2026-11-18.6';
 const refCode=c=>(c?'K-'+String(c.id).slice(0,4).toUpperCase()+' · ':'')+'v'+VERSION;
 const refBtn=c=>'<button class="ref" data-act="copyRef" title="Kliknutím zkopírujete označení klienta a verze. Pošlete ho s popisem problému.">'+esc(refCode(c))+' ⧉</button>';
 const note=c=>'<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>'.replace(/<\/div>$/,refBtn(c)+'</div>');
@@ -144,49 +144,37 @@ function viewHome(){
    +homeSide(rs)+'</div>'+homeBottom(rs)+'</div></div>';
 }
 function homeData(rs){
-  const rows=rs.map(({c,r})=>{
-    const sm=D.summary(c,r),bi=sm.best,bv=bi>=0?r.V[bi]:null;
-    let sens=null;
-    if(bv||r.T.fix){const c2=JSON.parse(JSON.stringify(c));c2.variants.forEach(v=>{v.rate=(+v.rate||0)+1;});c2.flat.fix.rate=(+c2.flat.fix.rate||0)+1;const r2=compute(c2);sens=bv&&r2.V[bi]?r2.V[bi].total-bv.total:(r.T.fix&&c.useRefix?r2.pmtFix-r.pmtFix:0);}
-    return {c,r,bv,sens,tax:(r.T.rent&&r.P&&r.P.inc>0)?Math.max(0,r.P.tax-r.P['tax'+r.P.best]):0};
-  });
-  return rows;
+  return rs.map(({c,r})=>{const bi=D.summary(c,r).best;return {c,r,bv:bi>=0?r.V[bi]:null};});
 }
-function bandRows(vals,cuts,labels){const n=labels.map(()=>0);vals.forEach(v=>{let i=0;while(i<cuts.length&&v>cuts[i])i++;n[i]++;});return n;}
 function homeTop(rs){
-  const d=homeData(rs),withNew=d.filter(x=>x.bv),newVol=withNew.reduce((a,x)=>a+x.bv.mortgage,0);
-  const oldVol=rs.reduce((a,x)=>a+(x.r.T.mort?num(x.c.flat.mort.balance):0),0);
-  const vars=S.clients.reduce((a,c)=>a.concat(c.variants.filter(v=>(+v.price||0)>0)),[]);
+  const d=homeData(rs),wn=d.filter(x=>x.bv),n=wn.length,avg=f=>n?wn.reduce((a,x)=>a+f(x.bv),0)/n:0;
   const empty=rs.filter(x=>D.isEmpty(x.c,x.r)).length;
-  const sav=d.reduce((a,x)=>a+x.tax,0);
-  const t=(k,v,sub,cl)=>'<div class="tile'+(cl?' '+cl:'')+'"><small>'+k+'</small><b>'+v+'</b><span>'+sub+'</span></div>';
+  const big=n?wn.reduce((b,x)=>x.bv.mortgage>b.bv.mortgage?x:b,wn[0]):null,low=n?wn.reduce((b,x)=>x.bv.free<b.bv.free?x:b,wn[0]):null;
+  const allV=rs.reduce((a,x)=>a.concat(x.r.V),[]).filter(v=>v.mortgage>0);
+  const t=(k,v,sub)=>'<div class="tile"><small>'+k+'</small><b>'+v+'</b><span>'+sub+'</span></div>';
   return '<div class="kpi">'+t('Klientů',S.clients.length,empty?'z toho '+empty+' '+pl(empty,'nevyplněný','nevyplněné','nevyplněných'):'všichni vyplnění')
-   +t('Objem nových hypoték',withNew.length?mil(newVol):'—','nejvýhodnější varianta každého klienta, '+withNew.length+' '+pl(withNew.length,'klient','klienti','klientů'))
-   +t('Stávající hypotéky',oldVol?mil(oldVol):'—','zbývající jistina u starých bytů')
-   +t('Zvažovaných bytů',vars.length,vars.length?'průměrná cena '+mil(vars.reduce((a,v)=>a+num(v.price),0)/vars.length):'zatím žádný')
-   +t('Možná úspora na dani',sav>0?kc(sav):'—',sav>0?'ročně, při nejlevnějším způsobu zdanění pronájmu':'nic k optimalizaci')+'</div>';
+   +t('Objem nových hypoték',n?mil(wn.reduce((a,x)=>a+x.bv.mortgage,0)):'—','nejvýhodnější varianta každého klienta, '+n+' '+pl(n,'klient','klienti','klientů'))
+   +t('Průměrná hypotéka',n?mil(avg(v=>v.mortgage)):'—',big?'největší: '+esc(big.c.name)+', '+mil(big.bv.mortgage):'zatím žádná')
+   +t('Průměrně zbude měsíčně',n?kc(avg(v=>v.free)):'—',low?'nejméně: '+esc(low.c.name)+', '+kc(low.bv.free):'zatím žádná varianta')
+   +t('Průměrná sazba a doba',allV.length?pct(allV.reduce((a,v)=>a+v.rate,0)/allV.length/100).replace('.',',')+' · '+Math.round(allV.reduce((a,v)=>a+v.years,0)/allV.length)+' let':'—',allV.length+' '+pl(allV.length,'varianta s hypotékou','varianty s hypotékou','variant s hypotékou'))+'</div>';
 }
 function homeSide(rs){
   const d=homeData(rs);
   const fx=d.filter(x=>x.r.T.fix&&(+x.c.flat.fix.months||0)>0&&+x.c.flat.fix.months<=12).sort((a,b)=>a.c.flat.fix.months-b.c.flat.fix.months);
   const cal='<div class="card"><h2>Kalendář fixací</h2><p class="fnote" style="margin:4px 0 8px">Konce fixace v nejbližších 12 měsících</p>'
    +(fx.length?'<table class="mt"><thead><tr><th>Za</th><th>Klient</th><th class="n">Splátka po refixaci</th></tr></thead><tbody>'+fx.map(x=>{const dl=x.r.pmtFix-x.r.pmtNow;return '<tr><td><b>'+x.c.flat.fix.months+' měs.</b></td><td>'+esc(x.c.name)+'</td><td class="n"><b class="'+(dl>0?'neg':'')+'">'+kcd(dl)+'</b></td></tr>';}).join('')+'</tbody></table>':'<p class="mut" style="margin:6px 0 0">V příštích 12 měsících nic nekončí.</p>')+'</div>';
-  const bv=d.filter(x=>x.bv);
-  const L=['do 80 %','80–90 %','nad 90 %'],ln=bandRows(bv.map(x=>x.bv.ltv||0),[0.8,0.9],L);
-  const dv=bv.filter(x=>x.bv.dsti!=null),D2=['do 35 %','35–45 %','nad 45 %'],dn=bandRows(dv.map(x=>x.bv.dsti),[0.35,0.45],D2);
-  const bar=(lab,n,tot,cl)=>'<div class="rb"><span>'+lab+'</span><i><u class="'+cl+'" style="width:'+(tot?Math.round(n/tot*100):0)+'%"></u></i><b>'+n+'</b></div>';
-  const risk='<div class="card"><h2>Rozložení rizik</h2><p class="fnote" style="margin:4px 0 8px">Nejvýhodnější varianta každého klienta</p>'
-   +(bv.length?'<small class="mut">LTV (výše hypotéky k ceně bytu)</small>'+L.map((l,i)=>bar(l,ln[i],bv.length,['ok','w','r'][i])).join('')+'<small class="mut" style="display:block;margin-top:10px">Splátky z příjmu</small>'+D2.map((l,i)=>bar(l,dn[i],dv.length,['ok','w','r'][i])).join(''):'<p class="mut" style="margin:6px 0 0">Zatím žádná varianta k vyhodnocení.</p>')+'</div>';
-  return '<div style="display:flex;flex-direction:column;gap:16px">'+cal+risk+'</div>';
+  const grp={};d.forEach(x=>{const k=D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r).split(' · ')[0];(grp[k]=grp[k]||[]).push(x.c.name);});
+  const ks=Object.keys(grp).sort((a,b)=>grp[b].length-grp[a].length);
+  const sit='<div class="card"><h2>Situace klientů</h2><p class="fnote" style="margin:4px 0 8px">Co se u klientů řeší</p>'+ks.map(k=>'<div class="rb"><span>'+esc(k)+'</span><i><u style="width:'+Math.round(grp[k].length/d.length*100)+'%"></u></i><b>'+grp[k].length+'</b></div><small class="mut" style="display:block;margin:-2px 0 6px 120px">'+esc(grp[k].join(', '))+'</small>').join('')+'</div>';
+  return '<div style="display:flex;flex-direction:column;gap:16px">'+cal+sit+'</div>';
 }
 function homeBottom(rs){
-  const d=homeData(rs),sn=d.filter(x=>x.sens!=null&&x.sens!==0).sort((a,b)=>b.sens-a.sens),mx=Math.max(1,...sn.map(x=>Math.abs(x.sens)));
-  const tx=d.filter(x=>x.tax>0);
-  const sens='<div class="card"><h2>Citlivost na sazby</h2><p class="fnote" style="margin:4px 0 8px">O kolik by se zvýšilo měsíční bydlení při sazbách o 1 p.b. vyšších</p>'
-   +(sn.length?sn.map(x=>'<div class="rb"><span>'+esc(x.c.name)+'</span><i><u class="w" style="width:'+Math.round(Math.abs(x.sens)/mx*100)+'%"></u></i><b>'+kcd(x.sens)+'</b></div>').join(''):'<p class="mut" style="margin:6px 0 0">Zatím není co vyhodnotit.</p>')+'</div>';
-  const tax='<div class="card"><h2>Daň z pronájmu</h2><p class="fnote" style="margin:4px 0 8px">Rozdíl mezi zvoleným a nejlevnějším způsobem zdanění, ročně</p>'
-   +(tx.length?'<table class="mt"><thead><tr><th>Klient</th><th>Zvoleno</th><th>Nejlepší</th><th class="n">Úspora</th></tr></thead><tbody>'+tx.map(x=>'<tr><td>'+esc(x.c.name)+'</td><td>'+x.r.P.sel+'</td><td>'+x.r.P.best+'</td><td class="n"><b>'+kc(x.tax)+'</b></td></tr>').join('')+'</tbody></table>':'<p class="mut" style="margin:6px 0 0">U všech pronajímaných bytů je už zvolený nejlevnější způsob.</p>')+'</div>';
-  return '<div class="hg2">'+sens+tax+'</div>';
+  const d=homeData(rs).filter(x=>x.bv).sort((a,b)=>b.bv.free-a.bv.free),mx=Math.max(1,...d.map(x=>Math.abs(x.bv.free)));
+  const fr='<div class="card"><h2>Kolik zbude měsíčně</h2><p class="fnote" style="margin:4px 0 8px">Po koupi, nejvýhodnější varianta každého klienta</p>'
+   +(d.length?d.map(x=>'<div class="rb"><span>'+esc(x.c.name)+'</span><i><u class="'+(x.bv.free<0?'r':'ok')+'" style="width:'+Math.round(Math.abs(x.bv.free)/mx*100)+'%"></u></i><b>'+kc(x.bv.free)+'</b></div>').join(''):'<p class="mut" style="margin:6px 0 0">Zatím žádná varianta.</p>')+'</div>';
+  const tb='<div class="card"><h2>Hypotéky podle klientů</h2><p class="fnote" style="margin:4px 0 8px">Nejvýhodnější varianta</p>'
+   +(d.length?'<table class="mt"><thead><tr><th>Klient</th><th class="n">Cena bytu</th><th class="n">Hypotéka</th><th class="n">LTV</th><th class="n">Splátka</th></tr></thead><tbody>'+d.slice().sort((a,b)=>b.bv.mortgage-a.bv.mortgage).map(x=>'<tr><td>'+esc(x.c.name)+'</td><td class="n">'+mil(x.bv.price)+'</td><td class="n"><b>'+mil(x.bv.mortgage)+'</b></td><td class="n">'+(x.bv.ltv==null?'—':pct(x.bv.ltv))+'</td><td class="n">'+kc(x.bv.pmt)+'</td></tr>').join('')+'</tbody></table>':'<p class="mut" style="margin:6px 0 0">Zatím žádná varianta.</p>')+'</div>';
+  return '<div class="hg2">'+fr+tb+'</div>';
 }
 
 
