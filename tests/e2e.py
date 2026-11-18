@@ -138,6 +138,13 @@ with sync_playwright() as p:
     check(p2.locator('.cr').count() == 2, 'po smazání zbyli dva klienti ' + str(p2.locator('.cr b').all_inner_texts()) + str(p2.locator('.m').count()))
     p2.click('text=Vrátit zpět'); p2.wait_for_timeout(300)
     check(p2.locator('.cr').count() == 3, 'vrácení zpět obnoví klienta')
+    p2.click('.cr >> nth=0 >> .kb'); p2.click('.mn >> text=Archivovat'); p2.wait_for_timeout(300)
+    check(p2.locator('.cr').count() == 2 and p2.locator('.arch').count() == 1, 'archivace přesune klienta do archivu')
+    check('v archivu 1' in p2.inner_text('.kpi'), 'dlaždice ukazuje počet v archivu')
+    p2.click('text=Archiv (1)'); p2.wait_for_timeout(200)
+    check(p2.locator('.cr.arc').count() == 1, 'archiv se rozbalí')
+    p2.click('.cr.arc >> .kb'); p2.click('.mn >> text=Obnovit z archivu'); p2.wait_for_timeout(300)
+    check(p2.locator('.cr').count() == 3 and p2.locator('.arch').count() == 0, 'obnovení z archivu vrátí klienta')
     for nm in names:
         p2.goto(URL); p2.wait_for_timeout(150); p2.locator('.cr', has_text=nm).first.click(); p2.wait_for_timeout(120)
         bad = False

@@ -5,7 +5,7 @@ const MAXV=6;
 function hydrate(c){
   const vs=(Array.isArray(c.variants)?c.variants:[]).slice(0,MAXV).map(v=>Object.assign(KB.mkVar(v.name||'Varianta',+v.price||0),v,{id:v.id||KB.uid()}));
   const n=KB.mkClient(Object.assign({},c,{variants:vs}));
-  n.id=c.id||KB.uid();n.sample=!!c.sample;n.updated=+c.updated||Date.now();
+  n.id=c.id||KB.uid();n.sample=!!c.sample;n.archived=!!c.archived;n.updated=+c.updated||Date.now();
   return n;
 }
 function seedState(){
@@ -49,7 +49,7 @@ function importText(state,text){
 }
 function duplicate(c){
   const n=JSON.parse(JSON.stringify(c));
-  n.id=KB.uid();n.name=c.name+' (kopie)';n.sample=false;n.updated=Date.now();
+  n.id=KB.uid();n.name=c.name+' (kopie)';n.sample=false;n.archived=false;n.updated=Date.now();
   n.variants.forEach(v=>v.id=KB.uid());
   return n;
 }

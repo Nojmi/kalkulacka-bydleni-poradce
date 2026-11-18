@@ -58,6 +58,8 @@ Na úvodní obrazovce je celkový přehled: počet klientů, objem a průměr no
 
 V seznamu klientů (menu ⋮ u řádku) a v rozbalovátku jde klienta **upravit** (jméno, poznámka; kód `K-XXXX` se nemění), **duplikovat** a **smazat**. Smazání vyžaduje potvrzení (s nabídkou exportu) a po něm je 8 vteřin tlačítko **Vrátit zpět**. Po obnovení stránky už vrátit nejde, proto zálohujte.
 
+**Archiv:** klienta, kterého už nepotřebujete, ale nechcete o něj přijít, můžete archivovat (menu ⋮ nebo karta Klient). Archivovaní klienti zmizí z hlavního seznamu a statistik, jsou ve sbaleném bloku „Archiv“ pod seznamem (a v rozbalovátku na konci) a kdykoli jdou obnovit. Součástí exportu a zálohy zůstávají.
+
 ## Označení pro hlášení problémů
 
 V šedém pruhu pod menu je vpravo označení ve tvaru `K-JN2T · v2026-11-18.1`: čtyřmístný kód klienta (stálý, přenáší se i exportem a importem) a verze aplikace. Kliknutím se zkopíruje. Při hlášení chyby pošlete toto označení, záložku a popis, ať je jasné, o kterém klientovi a které verzi je řeč. Číslo verze (`VERSION` v `js/app.js`) se zvyšuje ručně při každém vydání.

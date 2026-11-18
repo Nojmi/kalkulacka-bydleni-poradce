@@ -29,7 +29,7 @@ function mkClient(o){o=o||{};return {id:uid(),name:o.name||'Nový klient',note:o
  expenses:o.expenses||['Jídlo a drogerie','Doprava','Telefon a internet','Děti','Oblečení','Volný čas','Ostatní'].map(l=>L(l)),
  annual:o.annual||['Pojištění auta','Dovolená','Dárky a svátky','Servis auta','Ostatní'].map(l=>L(l)),
  t:Object.assign({flat:false,mort:false,fix:false,sell:false,rent:false,buy:true,annual:true},o.t),
- flat:mkFlat(o.flat),useRefix:o.useRefix!==false,variants:o.variants||[],sample:!!o.sample,updated:o.updated||Date.now()};}
+ flat:mkFlat(o.flat),useRefix:o.useRefix!==false,variants:o.variants||[],sample:!!o.sample,archived:!!o.archived,updated:o.updated||Date.now()};}
 function normalize(c){const n=mkClient(Object.assign({},c,{variants:(Array.isArray(c.variants)?c.variants:[]).map(v=>Object.assign(mkVar(v.name||'Varianta',+v.price||0),v,{id:uid()}))}));n.id=uid();n.sample=false;n.updated=Date.now();return n;}
 function samples(){const now=Date.now(),H=3600000,D=86400000;
  const E=a=>['Jídlo a drogerie','Doprava','Telefon a internet','Děti','Oblečení','Volný čas','Ostatní'].map((l,i)=>L(l,a[i])),A=a=>['Pojištění auta','Dovolená','Dárky a svátky','Servis auta','Ostatní'].map((l,i)=>L(l,a[i]));

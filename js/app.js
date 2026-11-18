@@ -87,7 +87,7 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const VERSION='2026-11-18.6';
+const VERSION='2026-11-18.7';
 const refCode=c=>(c?'K-'+String(c.id).slice(0,4).toUpperCase()+' · ':'')+'v'+VERSION;
 const refBtn=c=>'<button class="ref" data-act="copyRef" title="Kliknutím zkopírujete označení klienta a verze. Pošlete ho s popisem problému.">'+esc(refCode(c))+' ⧉</button>';
 const note=c=>'<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>'.replace(/<\/div>$/,refBtn(c)+'</div>');
@@ -118,7 +118,7 @@ const tIns=(r,right)=>tipc('Pojištění hypotéky',[['Stávající hypotéka',r
 /* ---------- domů ---------- */
 function viewHome(){
   const q=UI.homeQ.trim().toLowerCase();
-  const rs=S.clients.map(c=>({c,r:compute(c)}));
+  const all=S.clients.map(c=>({c,r:compute(c)})),rs=all.filter(x=>!x.c.archived),archR=all.filter(x=>x.c.archived).sort((a,b)=>b.c.updated-a.c.updated).filter(x=>!q||(x.c.name+' '+x.c.note).toLowerCase().includes(q));
   const sorted=rs.slice().sort((a,b)=>b.c.updated-a.c.updated);
   const filt=q?sorted.filter(x=>(x.c.name+' '+x.c.note).toLowerCase().includes(q)):sorted;
   const list=(UI.homeAll||q?filt:filt.slice(0,5));
@@ -126,13 +126,14 @@ function viewHome(){
   const empty=rs.filter(x=>D.isEmpty(x.c,x.r)).length;
   const vars=S.clients.reduce((a,c)=>a.concat(c.variants.filter(v=>(+v.price||0)>0)),[]);
   const avg=vars.length?vars.reduce((s,v)=>s+num(v.price),0)/vars.length:0;
-  const fx=D.nearestFix(S.clients);
-  const rowsH=list.map(x=>{
+  const rowF=x=>{
     const n=x.c.variants.length,cn=D.counts(x.r.W);
-    return '<div class="cr"><button class="crm" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r)+' · '+n+' '+pl(n,'varianta','varianty','variant'))+' · '+refCode(x.c).split(' · ')[0]+(x.c.note?' · '+esc(x.c.note.length>24?x.c.note.slice(0,24)+'…':x.c.note):'')+'</small></span>'
+    return '<div class="cr'+(x.c.archived?' arc':'')+'"><button class="crm" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r)+' · '+n+' '+pl(n,'varianta','varianty','variant'))+' · '+refCode(x.c).split(' · ')[0]+(x.c.note?' · '+esc(x.c.note.length>24?x.c.note.slice(0,24)+'…':x.c.note):'')+'</small></span>'
       +(cn.risk?'<span class="pill r">■ riziko</span>':'')+'<span class="tm">'+relShort(x.c.updated)+'</span></button>'
-      +'<span class="rm"><button class="kb" data-act="rowMenu" data-id="'+x.c.id+'" aria-label="Akce pro '+esc(x.c.name)+'" aria-haspopup="menu" aria-expanded="'+(UI.rowMenu===x.c.id)+'">⋮</button>'+(UI.rowMenu===x.c.id?'<span class="mn" role="menu"><button role="menuitem" data-act="editClient" data-id="'+x.c.id+'">Upravit</button><button role="menuitem" data-act="dupRow" data-id="'+x.c.id+'">Duplikovat</button><button role="menuitem" data-act="exportOne" data-id="'+x.c.id+'">Exportovat</button><button role="menuitem" class="dn" data-act="delRow" data-id="'+x.c.id+'">Smazat…</button></span>':'')+'</span></div>';
-  }).join('')||'<p class="mut" style="padding:14px">Žádný klient neodpovídá hledání.</p>';
+      +'<span class="rm"><button class="kb" data-act="rowMenu" data-id="'+x.c.id+'" aria-label="Akce pro '+esc(x.c.name)+'" aria-haspopup="menu" aria-expanded="'+(UI.rowMenu===x.c.id)+'">⋮</button>'+(UI.rowMenu===x.c.id?'<span class="mn" role="menu"><button role="menuitem" data-act="editClient" data-id="'+x.c.id+'">Upravit</button><button role="menuitem" data-act="dupRow" data-id="'+x.c.id+'">Duplikovat</button><button role="menuitem" data-act="exportOne" data-id="'+x.c.id+'">Exportovat</button><button role="menuitem" data-act="archRow" data-id="'+x.c.id+'">'+(x.c.archived?'Obnovit z archivu':'Archivovat')+'</button><button role="menuitem" class="dn" data-act="delRow" data-id="'+x.c.id+'">Smazat…</button></span>':'')+'</span></div>';
+  };
+  const rowsH=list.map(rowF).join('')||'<p class="mut" style="padding:14px">'+(q?'Žádný klient neodpovídá hledání.':'Žádní aktivní klienti.')+'</p>';
+  const archH=archR.length?'<div class="arch"><button class="lnk" data-act="archToggle" aria-expanded="'+(!!(UI.showArch||q))+'">'+((UI.showArch||q)?'▾':'▸')+' Archiv ('+archR.length+')</button>'+((UI.showArch||q)?'<div style="display:flex;flex-direction:column;gap:2px;margin-top:6px">'+archR.map(rowF).join('')+'</div>':'')+'</div>':'';
   const ch=S.changes||0;
   return '<div class="page"><div class="home"><div><h1>Dobrý den</h1><p class="q">Koho dnes připravujete?</p></div>'
    +'<input class="search" id="homeq" data-f="homeq" placeholder="Hledat klienta podle jména nebo poznámky…" value="'+esc(UI.homeQ)+'" aria-label="Hledat klienta" autocomplete="off">'
@@ -140,7 +141,7 @@ function viewHome(){
    +'<button class="act" data-act="importOpen"><b>Importovat zálohu</b><span>Soubor JSON, nic se nepřepíše</span></button>'
    +'<button class="act" data-act="backup"><b>Zálohovat všechny</b><span>'+(S.lastBackup?'Naposledy '+(days()===0?'dnes':'před '+days()+' '+pl(days(),'dnem','dny','dny')):'Zatím nezálohováno')+', od té doby '+ch+' '+pl(ch,'změna','změny','změn')+'</span></button></div>'
    +'<button class="helpbar" data-act="help"><span class="hi">?</span><span class="ht"><b>Jak aplikace funguje</b><small>Schéma celé aplikace: co zadat, co se počítá a kde co najdete. Pro každého, kdo ji otevře poprvé.</small></span><span class="ar">→</span></button>'
-   +homeTop(rs)+'<div class="hg"><div class="card"><div class="rowb"><h2>Naposledy upravení</h2>'+(UI.homeAll||q?'':'<button class="lnk" data-act="homeAll">Všichni klienti ('+S.clients.length+')</button>')+'</div><div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">'+rowsH+'</div></div>'
+   +homeTop(rs)+'<div class="hg"><div class="card"><div class="rowb"><h2>Naposledy upravení</h2>'+(UI.homeAll||q?'':'<button class="lnk" data-act="homeAll">Všichni klienti ('+rs.length+')</button>')+'</div><div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">'+rowsH+'</div>'+archH+'</div>'
    +homeSide(rs)+'</div>'+homeBottom(rs)+'</div></div>';
 }
 function homeData(rs){
@@ -148,11 +149,11 @@ function homeData(rs){
 }
 function homeTop(rs){
   const d=homeData(rs),wn=d.filter(x=>x.bv),n=wn.length,avg=f=>n?wn.reduce((a,x)=>a+f(x.bv),0)/n:0;
-  const empty=rs.filter(x=>D.isEmpty(x.c,x.r)).length;
+  const empty=rs.filter(x=>D.isEmpty(x.c,x.r)).length,na=S.clients.filter(c=>c.archived).length;
   const big=n?wn.reduce((b,x)=>x.bv.mortgage>b.bv.mortgage?x:b,wn[0]):null,low=n?wn.reduce((b,x)=>x.bv.free<b.bv.free?x:b,wn[0]):null;
   const allV=rs.reduce((a,x)=>a.concat(x.r.V),[]).filter(v=>v.mortgage>0);
   const t=(k,v,sub)=>'<div class="tile"><small>'+k+'</small><b>'+v+'</b><span>'+sub+'</span></div>';
-  return '<div class="kpi">'+t('Klientů',S.clients.length,empty?'z toho '+empty+' '+pl(empty,'nevyplněný','nevyplněné','nevyplněných'):'všichni vyplnění')
+  return '<div class="kpi">'+t('Aktivních klientů',rs.length,(empty?'z toho '+empty+' '+pl(empty,'nevyplněný','nevyplněné','nevyplněných'):'všichni vyplnění')+(na?' · v archivu '+na:''))
    +t('Objem nových hypoték',n?mil(wn.reduce((a,x)=>a+x.bv.mortgage,0)):'—','nejvýhodnější varianta každého klienta, '+n+' '+pl(n,'klient','klienti','klientů'))
    +t('Průměrná hypotéka',n?mil(avg(v=>v.mortgage)):'—',big?'největší: '+esc(big.c.name)+', '+mil(big.bv.mortgage):'zatím žádná')
    +t('Průměrně zbude měsíčně',n?kc(avg(v=>v.free)):'—',low?'nejméně: '+esc(low.c.name)+', '+kc(low.bv.free):'zatím žádná varianta')
@@ -585,7 +586,7 @@ function viewPrijmy(c,r){
     +tr('tBuy',t.buy,'Koupit nový byt')+tr('tAnnual',t.annual,'Roční jednorázové výdaje')+'</div></div>';
   const client='<div class="card fc"><b style="font-size:17px">Klient</b>'+fld('Jméno',txtInp('name',{aria:'Jméno klienta'}))
     +fld('Poznámka','<label class="inp ta"><textarea rows="2" data-f="note" data-k="text" aria-label="Poznámka">'+esc(c.note||'')+'</textarea></label>')+fld('Úspory k dispozici',numInp('savings','Kč',{aria:'Úspory k dispozici'}))
-    +'<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="dupClient">Duplikovat klienta</button><button class="btn sm" data-act="exportOne">Exportovat klienta</button><button class="btn sm" data-act="delClient" style="color:var(--risk)">Smazat klienta</button></div></div>';
+    +'<div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="dupClient">Duplikovat klienta</button><button class="btn sm" data-act="exportOne">Exportovat klienta</button><button class="btn sm" data-act="archCur">'+(c.archived?'Obnovit z archivu':'Archivovat klienta')+'</button><button class="btn sm" data-act="delClient" style="color:var(--risk)">Smazat klienta</button></div></div>';
   const inc='<div class="card fc"><div class="hd"><b>Měsíční příjmy</b><span class="sum">'+kc(r.income)+'</span></div>'+itemList('incomes')+'</div>';
   const exp='<div class="card fc"><div class="hd"><b>Výdaje domácnosti</b><span class="sum">'+kc(r.exp)+' / měs.</span></div>'+itemList('expenses')+'</div>';
   const ann=t.annual?'<div class="card fc"><div class="hd"><b>Roční jednorázové výdaje</b><span class="sum">'+kc(r.annualY)+' / rok</span></div>'+itemList('annual')+'<div class="mut" style="font-size:13px">÷ 12 = '+kc(r.annualM)+' měsíčně, započítává se do výdajů</div></div>':'';
@@ -738,12 +739,12 @@ function renderDD(){
   el.classList.toggle('on',UI.dd);
   if(!UI.dd)return;
   const q=UI.ddQ.trim().toLowerCase();
-  const list=S.clients.slice().sort((a,b)=>b.updated-a.updated).filter(x=>!q||(x.name+' '+x.note).toLowerCase().includes(q));
+  const list=S.clients.slice().sort((a,b)=>(!!a.archived-!!b.archived)||b.updated-a.updated).filter(x=>!q||(x.name+' '+x.note).toLowerCase().includes(q));
   const old=bkOld(),d=days();
   el.innerHTML='<div class="s"><input class="search" id="ddq" data-f="ddq" placeholder="Hledat klienta…" value="'+esc(UI.ddQ)+'" aria-label="Hledat klienta" autocomplete="off"></div>'
    +'<div class="meta"><span>Klienti · '+S.clients.length+'</span><i>seřazeno podle poslední úpravy</i></div><div class="list" role="listbox">'
    +(list.map(x=>{const r=compute(x),n=x.variants.length,cn=D.counts(r.W),tot=r.W.length;
-     return '<button class="li'+(x.id===c.id?' on':'')+'" role="option" aria-selected="'+(x.id===c.id)+'" data-act="open" data-id="'+x.id+'"><span class="av lg '+(x.id===c.id?'on':'g')+'">'+esc(D.initials(x.name))+'</span><div><b>'+esc(x.name)+'</b><small>'+(D.isEmpty(x,r)?'nevyplněno':n+' '+pl(n,'varianta','varianty','variant')+' · '+D.situation(x,r))+' · '+(x.id===c.id?rel(x.updated):relShort(x.updated))+'</small></div>'+(tot?(cn.risk?'<span class="pill r">■ '+tot+' '+pl(tot,'upozornění','upozornění','upozornění')+'</span>':'<span class="pill w">▲ '+tot+' '+pl(tot,'upozornění','upozornění','upozornění')+'</span>'):'')+'</button>';}).join('')||'<p class="mut" style="padding:14px">Nikdo nenalezen.</p>')
+     return '<button class="li'+(x.id===c.id?' on':'')+(x.archived?' arc':'')+'" role="option" aria-selected="'+(x.id===c.id)+'" data-act="open" data-id="'+x.id+'"><span class="av lg '+(x.id===c.id?'on':'g')+'">'+esc(D.initials(x.name))+'</span><div><b>'+esc(x.name)+(x.archived?' <span class="pill">archiv</span>':'')+'</b><small>'+(D.isEmpty(x,r)?'nevyplněno':n+' '+pl(n,'varianta','varianty','variant')+' · '+D.situation(x,r))+' · '+(x.id===c.id?rel(x.updated):relShort(x.updated))+'</small></div>'+(tot?(cn.risk?'<span class="pill r">■ '+tot+' '+pl(tot,'upozornění','upozornění','upozornění')+'</span>':'<span class="pill w">▲ '+tot+' '+pl(tot,'upozornění','upozornění','upozornění')+'</span>'):'')+'</button>';}).join('')||'<p class="mut" style="padding:14px">Nikdo nenalezen.</p>')
    +'</div><div class="ft"><div class="r2"><button class="btn blk" data-act="newClient">+ Nový klient</button><button class="btn" data-act="editClient" data-id="'+c.id+'">Upravit</button><button class="btn" data-act="dupClient">Duplikovat</button><button class="btn" data-act="delRow" data-id="'+c.id+'" style="color:var(--risk)">Smazat</button></div>'
    +'<div class="ls"><button class="lnk" data-act="importOpen">Importovat…</button><button class="lnk" data-act="backup">Exportovat všechny</button><button class="mut" data-act="restoreSamples" style="font-weight:500;font-size:13px">Obnovit ukázková data</button></div></div>'
    +'<div class="bkw'+(old?'':' ok')+'">'+(old?'<b>▲ Poslední záloha '+(d==null?'nikdy':'před '+d+' dny')+'.</b> ':'')+'Data jsou jen v tomto prohlížeči, záloha je jediná ochrana.</div>';
@@ -847,6 +848,9 @@ A.wizCancel=()=>{UI.modal={type:'wizcancel'};};
 A.wizDiscard=()=>{UI.wiz=null;UI.modal=null;UI.panel.open=false;UI.view='home';history.replaceState(null,'','#home');window.scrollTo(0,0);toast('Zakládání klienta zrušeno');};
 A.dupClient=()=>{const c=cur();const n=Store.duplicate(c);S.clients.unshift(n);S.activeId=n.id;S.changes=(S.changes||0)+1;UI.dd=false;UI.view='prehled';persist();toast('Klient zduplikován');};
 A.delClient=()=>{UI.modal={type:'delete',id:cur().id};};
+A.archToggle=()=>{UI.showArch=!UI.showArch;};
+A.archRow=t=>{const c=S.clients.find(x=>x.id===t.dataset.id);if(!c)return;c.archived=!c.archived;c.updated=Date.now();S.changes=(S.changes||0)+1;if(c.archived&&S.activeId===c.id){const nx=S.clients.find(x=>!x.archived);if(nx)S.activeId=nx.id;if(UI.view!=='home')UI.view='home';}persist();toast(c.archived?'Klient archivován: '+c.name:'Klient obnoven z archivu: '+c.name);};
+A.archCur=()=>{A.archRow({dataset:{id:cur().id}});};
 A.rowMenu=t=>{UI.rowMenu=UI.rowMenu===t.dataset.id?null:t.dataset.id;};
 A.delRow=t=>{UI.dd=false;UI.modal={type:'delete',id:t.dataset.id};};
 A.dupRow=t=>{const c=S.clients.find(x=>x.id===t.dataset.id);if(!c)return;const n=Store.duplicate(c);S.clients.unshift(n);S.changes=(S.changes||0)+1;persist();toast('Klient zduplikován: '+n.name);};
