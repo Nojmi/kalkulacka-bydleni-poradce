@@ -87,7 +87,7 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const VERSION='2026-11-18.8';
+const VERSION='2026-11-18.10';
 const refCode=c=>(c?'K-'+String(c.id).slice(0,4).toUpperCase()+' · ':'')+'v'+VERSION;
 const refBtn=c=>'<button class="ref" data-act="copyRef" title="Kliknutím zkopírujete označení klienta a verze. Pošlete ho s popisem problému.">'+esc(refCode(c))+' ⧉</button>';
 const note=c=>'<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>'.replace(/<\/div>$/,refBtn(c)+'</div>');
@@ -127,9 +127,14 @@ function viewHome(){
   const vars=S.clients.reduce((a,c)=>a.concat(c.variants.filter(v=>(+v.price||0)>0)),[]);
   const avg=vars.length?vars.reduce((s,v)=>s+num(v.price),0)/vars.length:0;
   const rowF=x=>{
-    const n=x.c.variants.length,cn=D.counts(x.r.W);
-    return '<div class="cr'+(x.c.archived?' arc':'')+'"><button class="crm" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r)+' · '+n+' '+pl(n,'varianta','varianty','variant'))+' · '+refCode(x.c).split(' · ')[0]+(x.c.note?' · '+esc(x.c.note.length>24?x.c.note.slice(0,24)+'…':x.c.note):'')+'</small></span>'
-      +'<span class="pill st">'+esc(STG[x.c.stage]||'')+'</span>'+(cn.risk?'<span class="pill r">■ riziko</span>':'')+'<span class="tm">'+relShort(x.c.updated)+'</span></button>'
+    const n=x.c.variants.length,cn=D.counts(x.r.W),bi=D.summary(x.c,x.r).best,bv=bi>=0?x.r.V[bi]:null,sd=sinceDays(x.c);
+    const cel=(k,v,sub)=>'<span class="ce"><b>'+v+'</b>'+(sub?'<em>'+sub+'</em>':'')+'</span>';
+    return '<div class="cr'+(x.c.archived?' arc':'')+'"><button class="crm" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+esc(x.c.note?(x.c.note.length>60?x.c.note.slice(0,60)+'…':x.c.note):'bez poznámky')+' · '+refCode(x.c).split(' · ')[0]+'</small></span>'
+      +'<span class="ce"><b>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r))+'</b><em>'+n+' '+pl(n,'varianta','varianty','variant')+'</em></span>'
+      +'<span class="ce"><span class="pill st">'+esc(STG[x.c.stage]||'')+'</span></span>'
+      +(bv?cel('Hypotéka',mil(bv.mortgage),esc(bv.name)+' · LTV '+pct(bv.ltv)):cel('Hypotéka','—','žádná varianta'))
+      +(bv?cel('Zbude měsíčně','<span class="'+(bv.free<0?'neg':'')+'">'+kc(bv.free)+'</span>',cn.risk?'<span class="pill r">■ riziko</span>':(cn.warn?'<span class="pill w">▲ pozor</span>':'bez rizika')):cel('Zbude měsíčně','—',''))
+      +cel('Kontakt',x.c.lastContact?(sd===0?'dnes':'před '+sd+' '+pl(sd,'dnem','dny','dny')):'nezapsán','upraveno '+relShort(x.c.updated))+'</button>'
       +'<span class="rm"><button class="kb" data-act="rowMenu" data-id="'+x.c.id+'" aria-label="Akce pro '+esc(x.c.name)+'" aria-haspopup="menu" aria-expanded="'+(UI.rowMenu===x.c.id)+'">⋮</button>'+(UI.rowMenu===x.c.id?'<span class="mn" role="menu"><button role="menuitem" data-act="editClient" data-id="'+x.c.id+'">Upravit</button><button role="menuitem" data-act="dupRow" data-id="'+x.c.id+'">Duplikovat</button><button role="menuitem" data-act="exportOne" data-id="'+x.c.id+'">Exportovat</button><button role="menuitem" data-act="contactRow" data-id="'+x.c.id+'">Kontaktován dnes</button><button role="menuitem" data-act="archRow" data-id="'+x.c.id+'">'+(x.c.archived?'Obnovit z archivu':'Archivovat')+'</button><button role="menuitem" class="dn" data-act="delRow" data-id="'+x.c.id+'">Smazat…</button></span>':'')+'</span></div>';
   };
   const rowsH=list.map(rowF).join('')||'<p class="mut" style="padding:14px">'+(q?'Žádný klient neodpovídá hledání.':'Žádní aktivní klienti.')+'</p>';
@@ -137,12 +142,10 @@ function viewHome(){
   const ch=S.changes||0;
   return '<div class="page"><div class="home"><div><h1>Dobrý den</h1><p class="q">Koho dnes připravujete?</p></div>'
    +'<input class="search" id="homeq" data-f="homeq" placeholder="Hledat klienta podle jména nebo poznámky…" value="'+esc(UI.homeQ)+'" aria-label="Hledat klienta" autocomplete="off">'
-   +'<p class="fnote" style="margin:-8px 0 0">Nezadávejte skutečné údaje klientů, aplikace je určená na ukázku s fiktivními daty.</p><div class="acts3"><button class="act blk" data-act="newClient"><b>+ Nový klient</b><span>Průvodce ve čtyřech krocích</span></button>'
-   +'<button class="act" data-act="importOpen"><b>Importovat zálohu</b><span>Soubor JSON, nic se nepřepíše</span></button>'
-   +'<button class="act" data-act="backup"><b>Zálohovat všechny</b><span>'+(S.lastBackup?'Naposledy '+(days()===0?'dnes':'před '+days()+' '+pl(days(),'dnem','dny','dny')):'Zatím nezálohováno')+', od té doby '+ch+' '+pl(ch,'změna','změny','změn')+'</span></button></div>'
+   +'<p class="fnote" style="margin:-8px 0 0">Nezadávejte skutečné údaje klientů, aplikace je určená na ukázku s fiktivními daty.</p><div class="acts3"><button class="act blk" data-act="newClient"><b>+ Nový klient</b><span>Průvodce ve čtyřech krocích</span></button><div class="sm2"><button class="btn" data-act="importOpen" title="Soubor JSON, nic se nepřepíše">Importovat zálohu</button><button class="btn" data-act="backup" title="'+(S.lastBackup?'Naposledy '+(days()===0?'dnes':'před '+days()+' '+pl(days(),'dnem','dny','dny')):'Zatím nezálohováno')+', od té doby '+ch+' '+pl(ch,'změna','změny','změn')+'">Zálohovat všechny</button></div></div>'
    +'<button class="helpbar" data-act="help"><span class="hi">?</span><span class="ht"><b>Jak aplikace funguje</b><small>Schéma celé aplikace: co zadat, co se počítá a kde co najdete. Pro každého, kdo ji otevře poprvé.</small></span><span class="ar">→</span></button>'
-   +homeTop(rs)+'<div class="hg"><div class="card"><div class="rowb"><h2>Naposledy upravení</h2>'+(UI.homeAll||q?'':'<button class="lnk" data-act="homeAll">Všichni klienti ('+rs.length+')</button>')+'</div><div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">'+rowsH+'</div>'+archH+'</div>'
-   +homeSide(rs)+'</div>'+homeCare(rs)+homeBottom(rs)+'</div></div>';
+   +homeTop(rs)+'<div class="hg"><div class="card"><div class="rowb"><h2>Naposledy upravení</h2>'+(UI.homeAll||q?'':'<button class="lnk" data-act="homeAll">Všichni klienti ('+rs.length+')</button>')+'</div><div class="crh"><span></span><span>Klient</span><span>Situace</span><span>Fáze</span><span>Hypotéka</span><span>Zbude měsíčně</span><span>Kontakt</span></div><div style="display:flex;flex-direction:column;gap:2px;margin-top:4px">'+rowsH+'</div>'+archH+'</div>'
+   +'</div>'+homeSide(rs)+homeCare(rs)+'</div></div>';
 }
 const STG=Object.fromEntries(KB.STAGES);
 const stageSel=(c,path,id)=>'<label class="inp"><select '+(id?'id="'+id+'" ':'')+'data-f="'+path+'" data-k="text" aria-label="Fáze klienta">'+KB.STAGES.map(x=>'<option value="'+x[0]+'"'+(x[0]===c.stage?' selected':'')+'>'+x[1]+'</option>').join('')+'</select></label>';
@@ -160,9 +163,7 @@ function homeTop(rs){
   const t=(k,v,sub)=>'<div class="tile"><small>'+k+'</small><b>'+v+'</b><span>'+sub+'</span></div>';
   return '<div class="kpi">'+t('Aktivních klientů',rs.length,(empty?'z toho '+empty+' '+pl(empty,'nevyplněný','nevyplněné','nevyplněných'):'všichni vyplnění')+(na?' · v archivu '+na:''))
    +t('Objem nových hypoték',n?mil(wn.reduce((a,x)=>a+x.bv.mortgage,0)):'—','nejvýhodnější varianta každého klienta, '+n+' '+pl(n,'klient','klienti','klientů'))
-   +t('Průměrná hypotéka',n?mil(avg(v=>v.mortgage)):'—',big?'největší: '+esc(big.c.name)+', '+mil(big.bv.mortgage):'zatím žádná')
-   +t('Průměrně zbude měsíčně',n?kc(avg(v=>v.free)):'—',low?'nejméně: '+esc(low.c.name)+', '+kc(low.bv.free):'zatím žádná varianta')
-   +t('Průměrná sazba a doba',allV.length?pct(allV.reduce((a,v)=>a+v.rate,0)/allV.length/100).replace('.',',')+' · '+Math.round(allV.reduce((a,v)=>a+v.years,0)/allV.length)+' let':'—',allV.length+' '+pl(allV.length,'varianta s hypotékou','varianty s hypotékou','variant s hypotékou'))+'</div>';
+   +t('Průměrná hypotéka',n?mil(avg(v=>v.mortgage)):'—',big?'největší: '+esc(big.c.name)+', '+mil(big.bv.mortgage):'zatím žádná')+'</div>';
 }
 function homeSide(rs){
   const d=homeData(rs);
@@ -171,7 +172,7 @@ function homeSide(rs){
    +(fx.length?'<table class="mt"><thead><tr><th>Za</th><th>Klient</th><th class="n">Splátka po refixaci</th></tr></thead><tbody>'+fx.map(x=>{const dl=x.r.pmtFix-x.r.pmtNow;return '<tr><td><b>'+x.c.flat.fix.months+' měs.</b></td><td>'+esc(x.c.name)+'</td><td class="n"><b class="'+(dl>0?'neg':'')+'">'+kcd(dl)+'</b></td></tr>';}).join('')+'</tbody></table>':'<p class="mut" style="margin:6px 0 0">V příštích 12 měsících nic nekončí.</p>')+'</div>';
   const cnt=KB.STAGES.map(x=>[x[1],d.filter(y=>y.c.stage===x[0]).map(y=>y.c.name)]);
   const fz='<div class="card"><h2>Fáze klientů</h2><p class="fnote" style="margin:4px 0 8px">Kde je který klient v procesu</p>'+cnt.map((k,i)=>'<div class="rb"><span>'+esc(k[0])+'</span><i><u class="'+(i===4?'ok':'')+'" style="width:'+Math.round(k[1].length/Math.max(1,d.length)*100)+'%"></u></i><b>'+k[1].length+'</b></div>'+(k[1].length?'<small class="mut" style="display:block;margin:-2px 0 6px 120px">'+esc(k[1].join(', '))+'</small>':'')).join('')+'</div>';
-  return '<div style="display:flex;flex-direction:column;gap:16px">'+cal+fz+'</div>';
+  return '<div class="hg2">'+cal+fz+'</div>';
 }
 function homeCare(rs){
   const care=rs.filter(x=>x.c.stage!=='vyrizeno').map(x=>({x,d:sinceDays(x.c)})).sort((a,b)=>b.d-a.d).slice(0,5);

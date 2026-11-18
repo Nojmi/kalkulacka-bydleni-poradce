@@ -6,7 +6,12 @@ import json, os, subprocess, sys, tempfile
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-URL = 'file://' + os.path.join(ROOT, 'index.html')
+import socket, time
+_sk = socket.socket(); _sk.bind(('127.0.0.1', 0)); PORT = _sk.getsockname()[1]; _sk.close()
+# přes http (ne file://): localStorage u file:// je v Chromiu nespolehlivý a test se choval nahodile
+_srv = subprocess.Popen([sys.executable, '-m', 'http.server', str(PORT), '--bind', '127.0.0.1'], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+time.sleep(0.8)
+URL = 'http://127.0.0.1:%d/index.html' % PORT
 tmp = tempfile.mkdtemp()
 # pevná testovací data (tests/fixtures.js), ne ukázkoví klienti z aplikace
 FIX = subprocess.run(['node', '-e', "const KB=require('./js/model.js'),F=require('./tests/fixtures.js');const c=F.samples();console.log(JSON.stringify({clients:c,activeId:c[0].id,lastBackup:Date.now()-9*86400000,changes:5,seedV:KB.SEED_V,key:KB.KEY}))"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
@@ -125,17 +130,17 @@ with sync_playwright() as p:
     ctx2 = b.new_context(viewport={'width': 1600, 'height': 1000}); p2 = ctx2.new_page(); e2 = []
     p2.on('pageerror', lambda e: e2.append(str(e)))
     p2.goto(URL); p2.wait_for_timeout(300)
-    names = p2.locator('.cr b').all_inner_texts()
+    names = p2.locator('.cr .i b').all_inner_texts()
     check(names == ['Kučerovi', 'Dostálovi', 'Marešovi'], 'výchozí data: tři ukázkoví klienti ' + str(names))
     # správa klientů: úprava, smazání, vrácení zpět
     p2.click('.cr >> nth=0 >> .kb'); p2.click('.mn >> text=Upravit'); p2.wait_for_timeout(200)
     p2.fill('#ecName', 'Kučerovi upr.'); p2.fill('#ecNote', 'nová poznámka'); p2.click('text=Uložit'); p2.wait_for_timeout(300)
-    n2 = p2.locator('.cr b').all_inner_texts()
+    n2 = p2.locator('.cr .i b').all_inner_texts()
     check('Kučerovi upr.' in n2, 'úprava klienta změní jméno v seznamu ' + str(n2))
     p2.click('.cr >> nth=0 >> .kb'); p2.click('.mn >> text=Smazat'); p2.wait_for_timeout(200)
     check(p2.locator('.m').count() == 1, 'smazání z řádku otevře potvrzení')
     p2.click('button:has-text("Smazat natrvalo")'); p2.wait_for_timeout(300)
-    check(p2.locator('.cr').count() == 2, 'po smazání zbyli dva klienti ' + str(p2.locator('.cr b').all_inner_texts()) + str(p2.locator('.m').count()))
+    check(p2.locator('.cr').count() == 2, 'po smazání zbyli dva klienti ' + str(p2.locator('.cr .i b').all_inner_texts()) + str(p2.locator('.m').count()))
     p2.click('text=Vrátit zpět'); p2.wait_for_timeout(300)
     check(p2.locator('.cr').count() == 3, 'vrácení zpět obnoví klienta')
     p2.click('.cr >> nth=0 >> .kb'); p2.click('.mn >> text=Archivovat'); p2.wait_for_timeout(300)
@@ -158,4 +163,5 @@ with sync_playwright() as p:
     check(not e2, 'výchozí data: v konzoli nejsou chyby ' + str(e2))
     b.close()
 print('\n' + ('VŠE V POŘÁDKU' if not fails else str(len(fails)) + ' chyb'))
+_srv.terminate()
 sys.exit(1 if fails else 0)
