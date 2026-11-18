@@ -23,7 +23,7 @@ const parseNum=raw=>{const s=String(raw).replace(/\s/g,'').replace(/−/g,'-').r
 const pl=(n,a,b,c)=>n===1?a:(n>=2&&n<=4)?b:c;
 function rel(ts){const m=Math.round((Date.now()-ts)/60000);if(m<2)return 'upraveno právě teď';if(m<60)return 'upraveno před '+m+' min';const h=Math.round(m/60);if(h<24)return 'upraveno před '+h+' h';const d=Math.round(h/24);return d===1?'upraveno včera':'upraveno před '+d+' dny';}
 function mkVar(name,price,o){o=o||{};const r=o.reno||[],op=o.ops||[];return {id:uid(),name,price:price||0,acq:o.acq||0,reno:RENO.map((l,i)=>L(l,r[i])),savReno:o.savReno||0,savMort:o.savMort||0,rate:o.rate||4.79,years:o.years||30,insSold:o.insSold||0,insKept:o.insKept||0,ops:VOPS.map((l,i)=>L(l,op[i]))};}
-function mkFlat(o){o=o||{};return {est:o.est||0,purchase:o.purchase||0,ops:o.ops||[L('Fond oprav a správa'),L('Energie'),L('Pojištění nemovitosti')],mort:Object.assign({balance:0,rate:0,months:0,ins:0},o.mort),fix:Object.assign({months:0,rate:0},o.fix),sale:Object.assign({comm:3,costs:0,exempt:true},o.sale),rent:Object.assign({rent:0,vac:8,repairs:0,tax:'A'},o.rent)};}
+function mkFlat(o){o=o||{};return {est:o.est||0,purchase:o.purchase||0,ops:o.ops||[L('Fond oprav a správa'),L('Energie'),L('Pojištění nemovitosti')],mort:Object.assign({balance:0,rate:0,months:0,ins:0},o.mort),fix:Object.assign({months:0,rate:0},o.fix),sale:Object.assign({comm:3,costs:0,exempt:true},o.sale),rent:Object.assign({rent:0,vac:8,repairs:0,tax:'A',tenant:0},o.rent)};}
 function mkClient(o){o=o||{};return {id:uid(),name:o.name||'Nový klient',note:o.note||'',savings:o.savings||0,
  incomes:o.incomes||[L('Příjem 1'),L('Příjem 2')],
  expenses:o.expenses||['Jídlo a drogerie','Doprava','Telefon a internet','Děti','Oblečení','Volný čas','Ostatní'].map(l=>L(l)),
@@ -87,12 +87,12 @@ function compute(c){
  const useFix=T.fix&&c.useRefix,pmtUsed=useFix?pmtFix:pmtNow,mIns=T.mort?(+m.ins||0):0;
  const housingNow=T.flat?flatOps+pmtUsed+mIns:0,freeNow=income-expTotal-housingNow;
  const S={price:+f.est||0};S.comm=S.price*(+f.sale.comm||0)/100;S.costs=+f.sale.costs||0;S.payoff=T.mort?(+m.balance||0):0;S.gain=S.price-(+f.purchase||0)-S.comm-S.costs;S.tax=(!f.sale.exempt&&S.gain>0)?S.gain*0.15:0;S.net=S.price-S.comm-S.costs-S.payoff-S.tax;
- const r=f.rent,P={gross:(+r.rent||0)*12};P.vacLoss=P.gross*(+r.vac||0)/100;P.inc=P.gross-P.vacLoss;P.opsY=flatOps*12;P.rep=+r.repairs||0;P.int=T.mort?(+m.balance||0)*(+m.rate||0)/100:0;P.dep=(+f.purchase||0)*0.034;
+ const r=f.rent,P={gross:(+r.rent||0)*12};P.vacLoss=P.gross*(+r.vac||0)/100;P.inc=P.gross-P.vacLoss;P.tenant=Math.min(flatOps,Math.max(0,+r.tenant||0));P.ownOps=flatOps-P.tenant;P.opsY=P.ownOps*12;P.rep=+r.repairs||0;P.int=T.mort?(+m.balance||0)*(+m.rate||0)/100:0;P.dep=(+f.purchase||0)*0.034;
  P.expA=Math.min(P.inc*0.3,600000);P.expB=P.opsY+P.rep+P.int;P.expC=P.expB+P.dep;
  ['A','B','C'].forEach(x=>{P['base'+x]=Math.max(0,P.inc-P['exp'+x]);P['tax'+x]=P['base'+x]*0.15;});
  P.best=['A','B','C'].reduce((b,x)=>P['tax'+x]<P['tax'+b]?x:b,'A');P.sel=r.tax||'A';P.tax=P['tax'+P.sel];
  P.netM=(P.inc-P.rep-P.opsY-P.tax)/12;
- const oldNet=!T.flat||T.sell?0:pmtUsed+mIns+flatOps-(T.rent?(P.inc-P.rep-P.tax)/12:0);
+ const oldNet=!T.flat||T.sell?0:pmtUsed+mIns+(T.rent?P.ownOps:flatOps)-(T.rent?(P.inc-P.rep-P.tax)/12:0);
  const proceeds=T.sell?Math.max(0,S.net):0,savings=+c.savings||0;
  const V=(T.buy?c.variants:[]).map(v=>{const reno=sum(v.reno),acq=+v.acq||0,price=+v.price||0,need=price+acq+reno,savUsed=(+v.savReno||0)+(+v.savMort||0);const mortgage=Math.max(0,need-savUsed-proceeds);const pmt=ann(mortgage,v.rate,(+v.years||0)*12);const ins=(T.sell||!T.flat)?(+v.insSold||0):(+v.insKept||0);const ops=sum(v.ops);const total=pmt+ins+ops+oldNet;return {name:v.name||'Bez názvu',price,acq,reno,need,savUsed,proceeds,mortgage,ltv:price>0?mortgage/price:null,rate:+v.rate||0,years:+v.years||0,pmt,ins,ops,old:oldNet,total,free:income-expTotal-total,dsti:income>0?(pmt+(T.mort&&!T.sell?pmtUsed:0))/income:null};});
  const W=[];

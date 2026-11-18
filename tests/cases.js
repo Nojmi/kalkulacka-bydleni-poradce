@@ -43,6 +43,16 @@ t('scénáře: bez konce fixace odpadají varianty po refinancování',()=>{cons
 t('scénáře: klient bez bytu žádné nemá',()=>ok(D.scenarios(sample('Petr'),0).list.length===0));
 t('scénáře nemění původního klienta',()=>{const c=sample('Nov'),a=JSON.stringify(c);D.scenarios(c,0);ok(JSON.stringify(c)===a);});
 
+t('pronájem: část provozu hradí nájemník (2 000 z 9 700) snižuje náklady vlastníka',()=>{
+  const c=sample('Nov'),a=KB.compute(c);c.flat.rent.tenant=1000;const b=KB.compute(c);
+  eq(b.P.tenant,1000);eq(b.P.ownOps,a.flatOps-1000);eq(b.P.opsY,a.P.opsY-12000);
+  eq(b.P.netM,a.P.netM+1000-(b.P.tax-a.P.tax)/12,'čistý nájem vzroste o podíl nájemníka, daň se přepočte');
+  eq(b.oldNet,a.oldNet-1000+(b.P.tax-a.P.tax)/12,'starý byt po odečtu nájmu');
+});
+t('pronájem: podíl nájemníka nemůže přesáhnout provoz a výchozí hodnota je 0',()=>{
+  const c=sample('Nov');eq(KB.compute(c).P.tenant,0);c.flat.rent.tenant=999999;const r=KB.compute(c);eq(r.P.ownOps,0);
+});
+
 /* C) přepínače, upozornění, nejlepší hodnoty */
 t('přepínače: prodej a pronájem se vylučují (prodej vyhrává ve výpočtu)',()=>{const c=sample('Nov');c.t.sell=true;c.t.rent=true;const T=KB.compute(c).T;ok(T.sell&&!T.rent);});
 t('přepínače: konec fixace vyžaduje hypotéku, hypotéka byt',()=>{const c=sample('Nov');c.t.mort=false;ok(!KB.compute(c).T.fix);c.t.mort=true;c.t.flat=false;const T=KB.compute(c).T;ok(!T.mort&&!T.fix&&!T.sell&&!T.rent);});

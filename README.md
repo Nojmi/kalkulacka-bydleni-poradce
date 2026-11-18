@@ -34,3 +34,9 @@ Data zůstávají jen v prohlížeči (localStorage). Nic se neodesílá. Záloh
 1 nájem u klienta bez bytu · 2 základ LTV · 3 splacení hypotéky při prodeji · 4 dělení výtěžku prodeje · 5 limit DSTI · 6 sazba daně 15/23 % a odpis v prvním roce · 7 scénář „ponechat prázdný“. Podrobnosti viz README předlohy; změna je vždy v `js/model.js`.
 
 Kontrolní příklady: `docs/KONTROLNI-PRIKLADY.md`.
+
+## Pronájem starého bytu: podíl nájemníka, refixace, daň
+
+- **Z provozu hradí nájemník** (Kč/měs.): u pronájmu se od provozu bytu odečte část, kterou platí nájemník (typicky energie). Vlastníkovi zůstává zbytek, ten vstupuje do čistého nájmu, daně i „Starý byt po odečtu nájmu". Výchozí hodnota je 0.
+- **Před a po refixaci**: pokud fixace končí do 12 měsíců, karta pronájmu ukáže sloupce Dnes / Po refixaci / Změna a součet prvních 12 měsíců. Při delší fixaci zůstává jednoduchá tabulka „po refixaci".
+- **Návrh daňové optimalizace**: text pod tabulkou daně řekne, která varianta (A, B, C) vychází nejníže a o kolik méně než ta použitá. Variantu nepřepíná, jen navrhuje.

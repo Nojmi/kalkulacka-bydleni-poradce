@@ -367,7 +367,7 @@ function flowSankey(c,r,v,w,h){
   if(oldOn){
     if(T.mort)outs.push(['o1','Splátka staré hypo',r.pmtUsed,COL.pmt]);
     if(T.mort)outs.push(['o2','Pojištění staré hypo',r.mIns,COL.ins]);
-    outs.push(['o3','Provoz starého bytu',r.flatOps,COL.ops]);
+    outs.push(['o3','Provoz starého bytu',rentOn?P.ownOps:r.flatOps,COL.ops]);
     if(rentOn){outs.push(['o4','Opravy a drobné',P.rep/12,'#8c939d']);outs.push(['o5','Daň z nájmu',P.tax/12,'#b4bac2']);}
   }
   outs.push(['n1','Splátka nové hypo',v.pmt,COL.pmt],['n2','Pojištění nové hypo',v.ins,COL.ins],['n3','Provoz nového bytu',v.ops,COL.ops],['n4','Ostatní výdaje',r.exp,COL.hh]);
@@ -478,7 +478,7 @@ function flatCards(c,r){
   const mortC='<div class="card fc"><div class="hd"><b>Hypotéka</b>'+tg('tMort',c.t.mort,'Stávající hypotéka')+'</div>'+(c.t.mort?'<div class="g4">'+fld('Zůstatek',numInp('flat.mort.balance','Kč',{aria:'Zůstatek'}))+fld('Sazba',numInp('flat.mort.rate','%',{kind:'dec',aria:'Sazba'}))+fld('Zbývá',numInp('flat.mort.months','měs.',{aria:'Zbývá měsíců'}))+fld('Pojištění '+tIns(r,true),numInp('flat.mort.ins','Kč',{aria:'Pojištění'}))+'</div><p class="fnote">Pojištění hypotéky je pevná, ručně zadaná částka.</p>':'')+'</div>';
   const fixC=c.t.mort?'<div class="card fc"><div class="hd"><b>Konec fixace</b>'+tg('tFix',c.t.fix,'Konec fixace')+'</div>'+(c.t.fix?'<div class="g2">'+fld('Fixace končí za',numInp('flat.fix.months','měsíců',{aria:'Fixace končí za'}))+fld('Očekávaná nová sazba',numInp('flat.fix.rate','%',{kind:'dec',aria:'Očekávaná nová sazba'}))+'</div>':'')+'</div>':'';
   let useC='';
-  if(T.rent)useC='<div class="card fc"><div class="hd"><b>Pronájem</b></div><div class="g3">'+fld('Nájemné',numInp('flat.rent.rent','Kč/měs.',{aria:'Nájemné'}))+fld('Neobsazenost',numInp('flat.rent.vac','%',{kind:'dec',aria:'Neobsazenost'}))+fld('Opravy a údržba',numInp('flat.rent.repairs','Kč/rok',{aria:'Opravy a údržba'}))+'</div></div>';
+  if(T.rent)useC='<div class="card fc"><div class="hd"><b>Pronájem</b></div><div class="g3">'+fld('Nájemné',numInp('flat.rent.rent','Kč/měs.',{aria:'Nájemné'}))+fld('Neobsazenost',numInp('flat.rent.vac','%',{kind:'dec',aria:'Neobsazenost'}))+fld('Opravy a údržba',numInp('flat.rent.repairs','Kč/rok',{aria:'Opravy a údržba'}))+'</div><div class="g2" style="margin-top:10px">'+fld('Z provozu hradí nájemník',numInp('flat.rent.tenant','Kč/měs.',{aria:'Z provozu hradí nájemník'}))+'</div><p class="fnote">Provoz bytu '+kc(r.flatOps)+' měsíčně: vlastník platí '+kc(r.P.ownOps)+(r.P.tenant>0?', nájemník '+kc(r.P.tenant):'')+'. Nájemník obvykle hradí energie a služby, vlastník fond oprav a správu.</p></div>';
   if(T.sell)useC='<div class="card fc"><div class="hd"><b>Prodej</b></div><div class="g3">'+fld('Provize',numInp('flat.sale.comm','%',{kind:'dec',aria:'Provize'}))+fld('Náklady prodeje',numInp('flat.sale.costs','Kč',{aria:'Náklady prodeje'}))+fld('Osvobozeno od daně',seg('exempt',[['1','Ano'],['0','Ne']],f.sale.exempt?'1':'0','lg'))+'</div></div>';
   return {opsC,mortC,fixC,useC};
 }
@@ -509,19 +509,32 @@ function viewByt(c,r){
     const diffTax=P.tax-P['tax'+P.best];
     const occ=Math.round((12-12*(+f.rent.vac||0)/100)*10)/10;
     const lv=[];let lvl=0;
-    const wf=[['Nájem za měsíc',P.gross/12,'tot'],['Neobsazenost (obsazeno '+NF2.format(occ)+' měsíců z 12)',-P.vacLoss/12],['Provoz bytu (poplatky SVJ, které platí vlastník)',-r.flatOps],['Opravy a drobné náklady',-P.rep/12],['Daň z nájmu ('+P.sel+')',-P.tax/12],['Příjem z pronájmu po nákladech',P.netM,'sub'],['Splátka hypotéky starého bytu',-r.pmtUsed],['Pojištění hypotéky '+tIns(r),-r.mIns],['Pronájem '+(P.netM-r.pmtUsed-r.mIns>=0?'ti měsíčně přispívá':'měsíčně doplácíš')+' '+tRentNet(r),P.netM-r.pmtUsed-r.mIns,'tot']];
+    const wf=[['Nájem za měsíc',P.gross/12,'tot'],['Neobsazenost (obsazeno '+NF2.format(occ)+' měsíců z 12)',-P.vacLoss/12],[P.tenant>0?'Provoz bytu, který platí vlastník ('+NF.format(Math.round(r.flatOps))+' − '+NF.format(Math.round(P.tenant))+' nájemník)':'Provoz bytu (poplatky SVJ, které platí vlastník)',-P.ownOps],['Opravy a drobné náklady',-P.rep/12],['Daň z nájmu ('+P.sel+')',-P.tax/12],['Příjem z pronájmu po nákladech',P.netM,'sub'],['Splátka hypotéky starého bytu',-r.pmtUsed],['Pojištění hypotéky '+tIns(r),-r.mIns],['Pronájem '+(P.netM-r.pmtUsed-r.mIns>=0?'ti měsíčně přispívá':'měsíčně doplácíš')+' '+tRentNet(r),P.netM-r.pmtUsed-r.mIns,'tot']];
     let lo=0,hi=P.gross/12;let t=0;wf.forEach(w=>{if(w[2]){t=w[1];}else t+=w[1];lo=Math.min(lo,t);hi=Math.max(hi,t);});
     const rng=(hi-lo)||1;let lev=0;
     const rowsW=wf.map(w=>{let a,b;if(w[2]){a=0;b=w[1];lev=w[1];}else{a=lev;b=lev+w[1];lev=b;}
       const l=((Math.min(a,b)-lo)/rng*100),wd=Math.max(.8,Math.abs(b-a)/rng*100),neg=!w[2]&&w[1]<0,bad=w[2]==='tot'&&w[1]<0&&w[0].startsWith('Pronájem');
       const v=w[2]?(bad?'▼ ':'')+kc(w[1]):(Math.abs(w[1])<0.5?'0 Kč':'−'+kc(Math.abs(w[1])));
       return '<div class="wr'+(w[2]?' b':'')+'"><span class="wl">'+(w[0].indexOf('<span')>=0?w[0]:esc(w[0]))+'</span><span class="wt"><i class="'+(w[2]?(w[1]<0?'ng':'ps'):'mn')+'" style="left:'+l.toFixed(2)+'%;width:'+wd.toFixed(2)+'%"></i></span><span class="wv'+((bad||(w[2]==='tot'&&w[1]<0))?' neg':'')+'">'+v+'</span></div>';}).join('');
-    const refTab=(T.mort&&T.fix)?'<table class="tx rf"><colgroup><col class="c0"><col><col></colgroup><thead><tr><th>Hypotéka starého bytu po refixaci</th><th>Měsíčně</th><th>Ročně</th></tr></thead><tbody>'
-      +[['Splátka hypotéky',-r.pmtFix],['Pojištění hypotéky',-r.mIns],['Příjem z pronájmu po nákladech',P.netM]].map(x=>'<tr><td>'+x[0]+'</td><td>'+(x[1]<0?'−':'')+kc(Math.abs(x[1]))+'</td><td>'+(x[1]<0?'−':'')+kc(Math.abs(x[1])*12)+'</td></tr>').join('')
-      +'<tr class="s tot"><td>Pronájem '+(P.netM-r.pmtFix-r.mIns>=0?'ti měsíčně přispívá':'měsíčně doplácíš')+'</td><td>'+kc(P.netM-r.pmtFix-r.mIns)+'</td><td>'+kc((P.netM-r.pmtFix-r.mIns)*12)+'</td></tr></tbody></table>':'';
+    const near_=T.mort&&T.fix&&r.k>0&&r.k<=12;
+    const sg=x=>(x<0?'−':'')+kc(Math.abs(x)),net0=P.netM-r.pmtNow-r.mIns,net1=P.netM-r.pmtFix-r.mIns;
+    let refTab='';
+    if(near_){
+      const y1=net0*r.k+net1*(12-r.k);
+      const R=[['Příjem z pronájmu po nákladech',P.netM,P.netM],['Splátka hypotéky',-r.pmtNow,-r.pmtFix],['Pojištění hypotéky',-r.mIns,-r.mIns]];
+      refTab='<table class="tx rf"><colgroup><col class="c0"><col><col><col></colgroup><thead><tr><th>Před a po refixaci<small>fixace končí za '+r.k+' '+pl(r.k,'měsíc','měsíce','měsíců')+'</small></th><th>Dnes<small>'+r.k+' '+pl(r.k,'měsíc','měsíce','měsíců')+'</small></th><th>Po refixaci<small>nová sazba '+NF2.format(+f.fix.rate||0)+' %</small></th><th>Změna</th></tr></thead><tbody>'
+        +R.map(x=>'<tr><td>'+x[0]+'</td><td>'+sg(x[1])+'</td><td>'+sg(x[2])+'</td><td>'+(Math.abs(x[2]-x[1])<0.5?'—':sg(x[2]-x[1]))+'</td></tr>').join('')
+        +'<tr class="s tot"><td>Pronájem '+(net1>=0?'ti měsíčně přispívá':'měsíčně doplácíš')+'</td><td>'+sg(net0)+'</td><td>'+sg(net1)+'</td><td>'+sg(net1-net0)+'</td></tr>'
+        +'<tr class="s"><td>Prvních 12 měsíců dohromady</td><td colspan="3">'+sg(y1)+' <span class="mut" style="font-size:12.5px">('+r.k+' × '+sg(net0)+' + '+(12-r.k)+' × '+sg(net1)+')</span></td></tr></tbody></table>';
+    }else if(T.mort&&T.fix){
+      refTab='<table class="tx rf"><colgroup><col class="c0"><col><col></colgroup><thead><tr><th>Hypotéka starého bytu po refixaci</th><th>Měsíčně</th><th>Ročně</th></tr></thead><tbody>'
+      +[['Splátka hypotéky',-r.pmtFix],['Pojištění hypotéky',-r.mIns],['Příjem z pronájmu po nákladech',P.netM]].map(x=>'<tr><td>'+x[0]+'</td><td>'+sg(x[1])+'</td><td>'+sg(x[1]*12)+'</td></tr>').join('')
+      +'<tr class="s tot"><td>Pronájem '+(net1>=0?'ti měsíčně přispívá':'měsíčně doplácíš')+'</td><td>'+kc(net1)+'</td><td>'+kc(net1*12)+'</td></tr></tbody></table>';
+    }
     right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Pronájem starého bytu</b><span class="mut" style="font-size:13px">splátka '+(r.useFix?'po refixaci':'dnešní')+'</span></div><div class="mut" style="font-size:13.5px">Od měsíčního nájmu k tomu, co skutečně zbude.</div><div class="wf">'+rowsW+'</div>'+refTab
       +'<p class="fnote">Daň a úroky počítají se zjednodušeným, neověřeným modelem a s dnešním zůstatkem hypotéky. Pojištění hypotéky je pevná, ručně zadaná částka.</p></div>';
     right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Pronájem: daň krok za krokem '+tRentTax(r)+'</b><span class="row"><span class="mut" style="font-size:13px">Použít</span>'+seg('taxsel',[['A','A'],['B','B'],['C','C']],P.sel)+'</span></div>'+tb
+      +'<div class="nav"><b>Návrh daňové optimalizace</b><span>'+(diffTax>0.5?'Nejnižší daň vychází při variantě '+P.best+' ('+names[P.best].split(' · ')[1].toLowerCase()+'): '+kc(P['tax'+P.best])+' ročně. Oproti použité variantě '+P.sel+' je to o '+kc(diffTax)+' ročně méně (zhruba '+kc(diffTax/12)+' měsíčně). Přepněte „Použít“ nahoře a výsledky se přepočtou.':'Použitá varianta '+P.sel+' je z tří variant nejvýhodnější: '+kc(P.tax)+' ročně.')+'</span></div>'
       +'<p class="fnote">Daň z pronájmu je zjednodušený, neověřený model. Úroky a odpisy jsou odhad, výslednou daň ověřte s daňovým poradcem.</p><div class="g3"><div class="tile"><small>Daň ročně · varianta '+P.sel+'</small><b>'+kc(P.tax)+'</b><span>'+(diffTax>0.5?'varianta '+P.best+' vychází o '+kc(diffTax)+' nižší':'nejnižší z variant')+'</span></div><div class="tile"><small>Čistý příjem z nájmu</small><b>'+kc(P.netM)+' / měs.</b><span>po neobsazenosti, provozu, opravách a dani</span></div><div class="tile"><small>Starý byt po odečtu nájmu</small><b>'+kc(r.oldNet)+' / měs.</b><span>splátka + pojištění + provoz − čistý nájem</span></div></div></div>';
   }
   if(T.sell){
