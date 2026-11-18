@@ -87,7 +87,10 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const NOTE='<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>';
+const VERSION='2026-11-18.1';
+const refCode=c=>(c?'K-'+String(c.id).slice(0,4).toUpperCase()+' · ':'')+'v'+VERSION;
+const refBtn=c=>'<button class="ref" data-act="copyRef" title="Kliknutím zkopírujete označení klienta a verze. Pošlete ho s popisem problému.">'+esc(refCode(c))+' ⧉</button>';
+const note=c=>'<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>'.replace(/<\/div>$/,refBtn(c)+'</div>');
 /* ⓘ „jak se to spočítalo“: bublina na najetí myší i na fokus z klávesnice */
 /* tip = výpočet přímo s čísly klienta: tipc('Nadpis',[[popisek,částka,'-'|'+'],…],['Celkem',částka],poznámka) */
 /* bublina se podle polohy ⓘ zarovná doleva/doprava, aby nevyjela z okna */
@@ -126,7 +129,7 @@ function viewHome(){
   const fx=D.nearestFix(S.clients);
   const rowsH=list.map(x=>{
     const n=x.c.variants.length,cn=D.counts(x.r.W);
-    return '<button class="cr" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r)+' · '+n+' '+pl(n,'varianta','varianty','variant'))+'</small></span>'
+    return '<button class="cr" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r)+' · '+n+' '+pl(n,'varianta','varianty','variant'))+' · '+refCode(x.c).split(' · ')[0]+'</small></span>'
       +(cn.risk?'<span class="pill r">■ riziko</span>':'')+'<span class="tm">'+relShort(x.c.updated)+'</span><span class="ar">→</span></button>';
   }).join('')||'<p class="mut" style="padding:14px">Žádný klient neodpovídá hledání.</p>';
   const ch=S.changes||0;
@@ -740,7 +743,7 @@ function renderModal(){
 /* ---------- režim pro klienta ---------- */
 function presentHeader(c){
   return '<header class="hdr"><span class="logo"><i>KB</i>'+esc(c.name)+' · srovnání bydlení</span><div class="sp"></div>'+seg('presTab',[['prehled','Přehled'],['grafy','Grafy'],['tabulka','Tabulka']].concat(c.t.flat?[['byt','Stávající byt']]:[]),UI.presTab,'lg')+'<button class="btn" data-act="endPresent">Ukončit prezentaci</button></header>'
-   +'<div class="note"><b>Orientační výpočet, ne nabídka banky.</b><span>Daň z pronájmu je zjednodušený model. Pojištění hypotéky je odhad.</span></div>';
+   +'<div class="note"><b>Orientační výpočet, ne nabídka banky.</b><span>Daň z pronájmu je zjednodušený model. Pojištění hypotéky je odhad.</span>'+refBtn(c)+'</div>';
 }
 function presentBody(c,r){
   const V=r.V,T=r.T,sm=D.summary(c,r);
@@ -768,17 +771,17 @@ function render(){
   const app=$('#app');
   document.body.classList.toggle('pres',UI.present);
   let html;
-  if(UI.wiz){html=wizHeader()+NOTE+'<main id="view">'+viewWiz(c,r)+'</main>';}
+  if(UI.wiz){html=wizHeader()+note(c)+'<main id="view">'+viewWiz(c,r)+'</main>';}
   else if(UI.present&&c){html=presentHeader(c)+'<main id="view">'+presentBody(c,r)+'</main>';}
-  else if(UI.view==='napoveda'){html=header(c,r)+NOTE+'<main id="view">'+viewHelp()+'</main>';}
-  else if(UI.view==='home'||!c){html=header(c,r)+NOTE+'<main id="view">'+viewHome()+'</main>';}
+  else if(UI.view==='napoveda'){html=header(c,r)+note(c)+'<main id="view">'+viewHelp()+'</main>';}
+  else if(UI.view==='home'||!c){html=header(c,r)+note(c)+'<main id="view">'+viewHome()+'</main>';}
   else{
     let view=UI.view;
     if(view==='byt'&&!r.T.flat)view='prehled';
     if(view==='scenare'&&!(r.T.flat&&r.T.buy&&c.variants.length))view='prehled';
     UI.view=view;
     const fn={prehled:viewPrehled,scenare:viewScenare,srovnani:viewSrovnani,grafy:viewGrafy,byt:viewByt,prijmy:viewPrijmy}[view];
-    html=header(c,r)+NOTE+'<main id="view">'+fn(c,r)+'</main>';
+    html=header(c,r)+note(c)+'<main id="view">'+fn(c,r)+'</main>';
   }
   UI.rendering=true;app.innerHTML=html;UI.rendering=false;
   UI.rendering=true;renderPanel();renderDD();renderModal();UI.rendering=false;
@@ -825,6 +828,7 @@ A.exportOne=()=>{const c=cur();download(Store.fileNameOne(c),Store.exportPayload
 A.backup=()=>{download(Store.fileNameAll(),Store.exportPayload(S.clients));S.lastBackup=Date.now();S.changes=0;persist();toast('Záloha všech klientů uložena');};
 A.present=()=>{UI.present=true;UI.dd=false;UI.panel.open=false;UI.presTab='prehled';window.scrollTo(0,0);};
 A.endPresent=()=>{UI.present=false;};
+A.copyRef=()=>{const t=refCode(cur());const ok=()=>toast('Zkopírováno: '+t);if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,()=>toast(t));else toast(t);};
 A.presTab=t=>{UI.presTab=t.dataset.v;};
 A.srovMain=t=>{UI.srovMain=t.dataset.v==='main';};
 A.chartMode=t=>{UI.charts[t.dataset.key]=t.dataset.v;};

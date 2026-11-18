@@ -26,6 +26,7 @@ with sync_playwright() as p:
     pg.click('.hdr >> text=Zpět do aplikace'); pg.wait_for_timeout(200)
     check(pg.inner_text('h1') == 'Dobrý den', 'ze schématu je cesta zpět')
     pg.click('.cr:has-text("Novákovi")'); pg.wait_for_timeout(200)
+    check(bool(__import__('re').match(r'K-[0-9A-Z]{4} · v\d{4}-\d\d-\d\d', pg.inner_text('.note .ref'))), 'v pruhu je označení klienta a verze ke sdílení problému')
     check('Žižkov 3+1' in pg.inner_text('h1'), 'Novákovi: nejlepší varianta Žižkov 3+1')
     check('15 284' in pg.inner_text('.vcard.best').replace('\xa0', ' '), 'Novákovi: zbude 15 284 Kč')
     pg.hover('.sumbox .tip >> nth=1'); pg.wait_for_timeout(150)
