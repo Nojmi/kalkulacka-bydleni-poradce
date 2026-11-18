@@ -1,6 +1,6 @@
 # Kontrolní příklady (fiktivní data)
 
-Hodnoty vznikly nezávisle v `docs/overeni-hodnot.py` (Python Decimal) a hlídá je `tests/cases.js`.
+Hodnoty vznikly nezávisle v `docs/overeni-hodnot.py` (Python Decimal) a hlídá je `tests/cases.js`. Počítají se na pevných testovacích datech v `tests/fixtures.js` (Novák, Horák, Jana, Petr), která se v aplikaci nezobrazují.
 
 | Příklad | Hodnota |
 |---|---|

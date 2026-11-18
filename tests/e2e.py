@@ -2,19 +2,23 @@
 """Prohlížečový test (Playwright, headless Chromium): živý přepočet, fokus při psaní, Tab, přepínače,
 6 variant, export/import, smazání klienta, režim pro klienta, chyby v konzoli.
 Spuštění: python3 tests/e2e.py   (potřebuje: pip install playwright && playwright install chromium)"""
-import json, os, sys, tempfile
+import json, os, subprocess, sys, tempfile
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 URL = 'file://' + os.path.join(ROOT, 'index.html')
 tmp = tempfile.mkdtemp()
+# pevná testovací data (tests/fixtures.js), ne ukázkoví klienti z aplikace
+FIX = subprocess.run(['node', '-e', "const KB=require('./js/model.js'),F=require('./tests/fixtures.js');const c=F.samples();console.log(JSON.stringify({clients:c,activeId:c[0].id,lastBackup:Date.now()-9*86400000,changes:5,seedV:KB.SEED_V,key:KB.KEY}))"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()
+FIXD = json.loads(FIX); FIXKEY = FIXD.pop('key')
+INIT = "if(!localStorage.getItem(%s))localStorage.setItem(%s,%s);" % (json.dumps(FIXKEY), json.dumps(FIXKEY), json.dumps(json.dumps(FIXD)))
 fails = []
 def check(cond, msg):
     print(('  ok   ' if cond else '  CHYBA ') + msg)
     if not cond: fails.append(msg)
 
 with sync_playwright() as p:
-    b = p.chromium.launch(); ctx = b.new_context(viewport={'width': 1920, 'height': 1080}, accept_downloads=True); pg = ctx.new_page()
+    b = p.chromium.launch(); ctx = b.new_context(viewport={'width': 1920, 'height': 1080}, accept_downloads=True); ctx.add_init_script(INIT); pg = ctx.new_page()
     errs = []
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
     pg.on('pageerror', lambda e: errs.append('PAGEERR ' + str(e)))
@@ -52,7 +56,7 @@ with sync_playwright() as p:
     check(pg.evaluate('document.activeElement.value') == '4,', 'pole drží rozepsané „4,“')
     pg.keyboard.type('5', delay=30)
     check(pg.evaluate('window.__KB.cur().variants[0].rate') == 4.5, 'desetinná čárka se zpracuje (4,5)')
-    pg.keyboard.press('Escape'); pg.wait_for_timeout(400); pg.reload(); pg.wait_for_timeout(300)
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(900); pg.reload(); pg.wait_for_timeout(300)
     check(pg.evaluate("window.__KB.S.clients.find(c=>c.name==='Novákovi').variants[0].price") == 5900000, 'změna přežije obnovení stránky (localStorage)')
     # Tab přeskakuje názvy položek
     pg.evaluate("location.hash='#prijmy'"); pg.wait_for_timeout(200)
@@ -117,6 +121,23 @@ with sync_playwright() as p:
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     check(pg.locator('.tabs').count() == 1, 'Escape ukončí prezentaci')
     check(not errs, 'v konzoli nejsou chyby ' + str(errs))
+    # výchozí ukázková data aplikace: tři klienti, všechny záložky bez chyb
+    ctx2 = b.new_context(viewport={'width': 1600, 'height': 1000}); p2 = ctx2.new_page(); e2 = []
+    p2.on('pageerror', lambda e: e2.append(str(e)))
+    p2.goto(URL); p2.wait_for_timeout(300)
+    names = p2.locator('.cr b').all_inner_texts()
+    check(names == ['Kučerovi', 'Dostálovi', 'Marešovi'], 'výchozí data: tři ukázkoví klienti ' + str(names))
+    for nm in names:
+        p2.goto(URL); p2.wait_for_timeout(150); p2.locator('.cr', has_text=nm).first.click(); p2.wait_for_timeout(120)
+        bad = False
+        for t in ['Přehled', 'Scénáře', 'Srovnání', 'Grafy', 'Stávající byt', 'Příjmy a výdaje']:
+            l = p2.locator('.hdr').get_by_text(t, exact=True)
+            if l.count() == 0: continue
+            l.first.click(); p2.wait_for_timeout(100)
+            tx = p2.inner_text('#view')
+            bad = bad or 'NaN' in tx or 'undefined' in tx or 'Infinity' in tx
+        check(not bad, 'výchozí data: ' + nm + ' bez NaN ve všech záložkách')
+    check(not e2, 'výchozí data: v konzoli nejsou chyby ' + str(e2))
     b.close()
 print('\n' + ('VŠE V POŘÁDKU' if not fails else str(len(fails)) + ' chyb'))
 sys.exit(1 if fails else 0)

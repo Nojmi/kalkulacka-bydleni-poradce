@@ -87,7 +87,7 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const VERSION='2026-11-18.2';
+const VERSION='2026-11-18.3';
 const refCode=c=>(c?'K-'+String(c.id).slice(0,4).toUpperCase()+' · ':'')+'v'+VERSION;
 const refBtn=c=>'<button class="ref" data-act="copyRef" title="Kliknutím zkopírujete označení klienta a verze. Pošlete ho s popisem problému.">'+esc(refCode(c))+' ⧉</button>';
 const note=c=>'<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>'.replace(/<\/div>$/,refBtn(c)+'</div>');

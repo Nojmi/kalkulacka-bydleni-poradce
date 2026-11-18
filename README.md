@@ -26,8 +26,7 @@ Data zůstávají jen v prohlížeči (localStorage). Nic se neodesílá. Záloh
 
 ## Odchylky od předlohy
 - Zvýraznění shody v „Nemovitosti − dluhy“ označí scénáře 2 i 3 (předloha jen 2).
-- Přehled prázdného klienta (Jana) ukazuje Prodej + Upozornění jen při ≥ 4 upozorněních.
-- Prázdný ukázkový klient je řazen poslední (aktualizován před 7 dny, ne „před 10 min“).
+- Přehled klienta s hodně riziky ukazuje Prodej + Upozornění jen při ≥ 4 upozorněních.
 - Tlačítko „Upravit klienta“ chybí (hlavička: Exportovat + Prezentovat).
 
 ## Otevřené otázky z předlohy (použit výchozí návrh)
@@ -51,12 +50,20 @@ Splátka, zůstatek po refixaci a čistý nájem se počítají stejně. Daň z 
 | Úrok z hypotéky | úroky za 12 měsíců po refixaci | dnešní zůstatek × dnešní sazba |
 | Pojištění hypotéky | uznaný výdaj | neuznává se |
 
-Demo je zjednodušený, neověřený model a ukázkové hodnoty (Novákovi, Horákovi) na tom stojí.
+Demo je zjednodušený, neověřený model a kontrolní hodnoty v testech (tests/fixtures.js) na tom stojí.
 
 ## Označení pro hlášení problémů
 
 V šedém pruhu pod menu je vpravo označení ve tvaru `K-JN2T · v2026-11-18.1`: čtyřmístný kód klienta (stálý, přenáší se i exportem a importem) a verze aplikace. Kliknutím se zkopíruje. Při hlášení chyby pošlete toto označení, záložku a popis, ať je jasné, o kterém klientovi a které verzi je řeč. Číslo verze (`VERSION` v `js/app.js`) se zvyšuje ručně při každém vydání.
 
-## Testovací klienti
+## Ukázkoví klienti
 
-Při prvním spuštění je v aplikaci 14 fiktivních klientů, z toho devět „Test 1…9“, kde každý ukazuje jeden stav aplikace (pronájem a návrh daně, refixace brzy i pozdě, byt bez hypotéky, prodej se ztrátou, záporné cashflow, šest variant a další). Přehled a postup testování: [docs/TESTOVACI-KLIENTI.md](docs/TESTOVACI-KLIENTI.md). Už uložená data v prohlížeči se nepřepisují, nové ukázky se jen doplní.
+Při prvním spuštění jsou v aplikaci tři fiktivní klienti, každý s jinou situací:
+
+| Klient | Situace |
+|---|---|
+| Kučerovi | Stávající byt si nechají a pronajímají, vybírají ze dvou nových bytů. |
+| Dostálovi | Stávající byt prodají a z výtěžku financují nový, vybírají ze tří. |
+| Marešovi | Byt si nechají a pronajímají, hypotéku refinancují za 7 měsíců, vybírají ze dvou nových bytů. |
+
+Podrobnosti a postup testování: [docs/TESTOVACI-KLIENTI.md](docs/TESTOVACI-KLIENTI.md). Ukázky se při změně dat v nové verzi aplikace nahradí novými, vlastní klienti zůstanou. Automatické testy používají vlastní pevná data v `tests/fixtures.js`, ne ukázkové klienty z aplikace.

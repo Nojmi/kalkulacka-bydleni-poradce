@@ -10,8 +10,6 @@ function hydrate(c){
 }
 function seedState(){
   const s=KB.seed();s.changes=5;
-  // prázdný ukázkový klient je v seznamu až na konci, ať demo nezačíná prázdnou kartou
-  const e=s.clients.find(c=>c.name.startsWith('Prázdný'));if(e)e.updated=Date.now()-16*86400000;
   return s;
 }
 function load(storage){
@@ -21,10 +19,9 @@ function load(storage){
   try{
     const d=JSON.parse(raw);
     if(!d||!Array.isArray(d.clients))throw new Error('tvar');
-    const clients=d.clients.map(hydrate);
-    // starší uložená data: dopsat nové ukázkové (testovací) klienty, existující se nepřepisují
-    const seedV=+d.seedV||0;
-    if(seedV<KB.SEED_V){const have=new Set(clients.map(c=>c.name));KB.samples().forEach(x=>{if(!have.has(x.name))clients.push(x);});}
+    let clients=d.clients.map(hydrate);
+    // starší verze ukázkových dat: ukázkoví klienti se nahradí novými, vlastní klienti zůstanou
+    if((+d.seedV||0)<KB.SEED_V)clients=KB.samples().concat(clients.filter(c=>!c.sample));
     const activeId=clients.some(c=>c.id===d.activeId)?d.activeId:(clients[0]&&clients[0].id)||null;
     return {state:{clients,activeId,lastBackup:d.lastBackup||null,changes:+d.changes||0,seedV:KB.SEED_V},fresh:false};
   }catch(e){
