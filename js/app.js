@@ -422,7 +422,7 @@ function viewGrafy(c,r,pres){
 }
 
 /* ---------- scénáře ---------- */
-function viewScenare(c,r){
+function viewScenare(c,r,pres){
   const vi=Math.min(UI.scenVar,c.variants.length-1);
   const sc=D.scenarios(c,vi),list=sc.list;
   if(!list.length)return '<div class="page"><div class="head"><div class="t"><h1 class="h1 m">Scénáře</h1></div></div><div class="empty">Scénáře se ukážou, když má klient stávající byt a aspoň jednu variantu.</div></div>';
@@ -440,7 +440,7 @@ function viewScenare(c,r){
     return '<div class="vcard'+cl+'" style="cursor:default"><div class="toprow" style="min-height:26px">'+(bi.has(i)?'<span class="pill a">◆ Nejvíc zbude</span>':'')+'</div>'
       +'<div><div class="ttl" style="min-height:52px">'+s.title+'</div><div class="mut" style="font-size:13.5px;margin-top:4px;min-height:40px">'+esc(D.scenarioText(s,c,s.r))+'</div></div>'
       +'<div><div class="mut" style="font-size:14px">Zbude měsíčně '+tFree(r,s.free,s.total)+'</div><div class="big'+(s.free<0?' neg':'')+'" style="font-size:38px;'+(bi.has(i)?'color:var(--accd)':s.free<0?'color:var(--risk)':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free)+'</div><div class="mut" style="font-size:13.5px;margin-top:2px">'+kcd(s.free-todayFree)+' proti dnešku</div><div class="yr"><span>Ročně zbude <small>(12 × měsíčně)</small> '+tYear(s,sc)+'</span><b class="'+(s.free<0?'neg':'')+'">'+(s.free<0?'▼ ':'')+kc(s.free*12)+'</b></div></div><hr>'
-      +'<div class="rowb"><span class="mut" style="font-size:14px">Bydlení měsíčně '+tParts(s)+'</span><b style="font-size:20px;font-weight:650">'+kc(s.total)+'</b></div><div style="width:'+w.toFixed(1)+'%">'+stackBar(rows)+'</div>'+legendRows(rows)
+      +'<div class="rowb"><span class="mut" style="font-size:14px">Bydlení měsíčně '+tParts(s)+'</span><b style="font-size:20px;font-weight:650">'+kc(s.total)+'</b></div><div style="width:'+w.toFixed(1)+'%">'+stackBar(rows)+'</div>'+(pres?'':legendRows(rows))
       +'<div class="pills" style="margin-top:auto">'+pills.join('')+'</div></div>';
   }).join('');
   const rowsDef=[['Nová hypotéka',s=>s.rows.newMort,'min',v=>v==null?'—':kc(v)],
@@ -746,6 +746,7 @@ function presentBody(c,r){
   const V=r.V,T=r.T,sm=D.summary(c,r);
   if(UI.presTab==='grafy')return viewGrafy(c,r,true);
   if(UI.presTab==='tabulka')return '<div class="page"><h1 class="h1" style="font-size:44px">Srovnání variant</h1><div class="card" style="padding:0;overflow:auto">'+compareTable(c,r,true)+'</div></div>';
+  if(V.length&&T.flat&&T.buy&&D.scenarios(c,0).list.length)return viewScenare(c,r,true);
   if(!V.length)return '<div class="page"><h1 class="h1">'+esc(c.name)+'</h1><p class="lead">Zatím není zadaná žádná varianta nového bytu.</p></div>';
   const bi=sm.best;
   const cards=(['x'].map(()=>'<div class="vcard dnes"><div class="ttl">Dnes</div><div><div class="lbl2">Bydlení měsíčně</div><div class="big">'+(T.flat?kc(r.housingNow):'—')+'</div></div><hr><div><div class="lbl2">Zbude měsíčně</div><div class="big">'+kc(sm.todayFree)+'</div><div class="mut" style="font-size:16px">dnešní stav</div></div></div>')).join('')
