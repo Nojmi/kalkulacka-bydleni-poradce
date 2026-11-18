@@ -87,7 +87,7 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const VERSION='2026-11-18.10';
+const VERSION='2026-11-18.11';
 const refCode=c=>(c?'K-'+String(c.id).slice(0,4).toUpperCase()+' · ':'')+'v'+VERSION;
 const refBtn=c=>'<button class="ref" data-act="copyRef" title="Kliknutím zkopírujete označení klienta a verze. Pošlete ho s popisem problému.">'+esc(refCode(c))+' ⧉</button>';
 const note=c=>'<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>'.replace(/<\/div>$/,refBtn(c)+'</div>');
@@ -142,7 +142,7 @@ function viewHome(){
   const ch=S.changes||0;
   return '<div class="page"><div class="home"><div><h1>Dobrý den</h1><p class="q">Koho dnes připravujete?</p></div>'
    +'<input class="search" id="homeq" data-f="homeq" placeholder="Hledat klienta podle jména nebo poznámky…" value="'+esc(UI.homeQ)+'" aria-label="Hledat klienta" autocomplete="off">'
-   +'<p class="fnote" style="margin:-8px 0 0">Nezadávejte skutečné údaje klientů, aplikace je určená na ukázku s fiktivními daty.</p><div class="acts3"><button class="act blk" data-act="newClient"><b>+ Nový klient</b><span>Průvodce ve čtyřech krocích</span></button><div class="sm2"><button class="btn" data-act="importOpen" title="Soubor JSON, nic se nepřepíše">Importovat zálohu</button><button class="btn" data-act="backup" title="'+(S.lastBackup?'Naposledy '+(days()===0?'dnes':'před '+days()+' '+pl(days(),'dnem','dny','dny')):'Zatím nezálohováno')+', od té doby '+ch+' '+pl(ch,'změna','změny','změn')+'">Zálohovat všechny</button></div></div>'
+   +'<p class="fnote" style="margin:-8px 0 0">Nezadávejte skutečné údaje klientů, aplikace je určená na ukázku s fiktivními daty.</p><div class="acts3"><button class="btn blk" data-act="newClient">+ Nový klient</button><div class="sm2"><button class="btn" data-act="importOpen" title="Soubor JSON, nic se nepřepíše">Importovat zálohu</button><button class="btn" data-act="backup" title="'+(S.lastBackup?'Naposledy '+(days()===0?'dnes':'před '+days()+' '+pl(days(),'dnem','dny','dny')):'Zatím nezálohováno')+', od té doby '+ch+' '+pl(ch,'změna','změny','změn')+'">Zálohovat všechny</button></div></div>'
    +'<button class="helpbar" data-act="help"><span class="hi">?</span><span class="ht"><b>Jak aplikace funguje</b><small>Schéma celé aplikace: co zadat, co se počítá a kde co najdete. Pro každého, kdo ji otevře poprvé.</small></span><span class="ar">→</span></button>'
    +homeTop(rs)+'<div class="hg"><div class="card"><div class="rowb"><h2>Naposledy upravení</h2>'+(UI.homeAll||q?'':'<button class="lnk" data-act="homeAll">Všichni klienti ('+rs.length+')</button>')+'</div><div class="crh"><span></span><span>Klient</span><span>Situace</span><span>Fáze</span><span>Hypotéka</span><span>Zbude měsíčně</span><span>Kontakt</span></div><div style="display:flex;flex-direction:column;gap:2px;margin-top:4px">'+rowsH+'</div>'+archH+'</div>'
    +'</div>'+homeSide(rs)+homeCare(rs)+'</div></div>';
