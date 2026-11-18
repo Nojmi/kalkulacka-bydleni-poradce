@@ -40,3 +40,15 @@ Kontrolní příklady: `docs/KONTROLNI-PRIKLADY.md`.
 - **Z provozu platí vlastník** (Kč/měs.): při pronájmu se jako náklad vlastníka počítá jen tato částka (typicky fond oprav, správa, pojištění domu), zbytek provozu hradí nájemník. Vstupuje do čistého nájmu, daně i „Starý byt po odečtu nájmu". Prázdné nebo 0 = celý provoz platí vlastník.
 - **Před a po refixaci**: pokud fixace končí do 12 měsíců, karta pronájmu ukáže sloupce Dnes / Po refixaci / Změna a součet prvních 12 měsíců. Při delší fixaci zůstává jednoduchá tabulka „po refixaci".
 - **Návrh daňové optimalizace**: text pod tabulkou daně řekne, která varianta (A, B, C) vychází nejníže a o kolik méně než ta použitá. Variantu nepřepíná, jen navrhuje.
+
+## Rozdíly v dani proti osobní kalkulačce autora (záměrně ponecháno)
+
+Splátka, zůstatek po refixaci a čistý nájem se počítají stejně. Daň z nájmu (varianta C) se liší ve třech zjednodušeních:
+
+| | Osobní kalkulačka | Tato demo aplikace |
+|---|---|---|
+| Odpisy | 1,4 % v prvním roce | 3,4 % z pořizovací ceny |
+| Úrok z hypotéky | úroky za 12 měsíců po refixaci | dnešní zůstatek × dnešní sazba |
+| Pojištění hypotéky | uznaný výdaj | neuznává se |
+
+Demo je zjednodušený, neověřený model a ukázkové hodnoty (Novákovi, Horákovi) na tom stojí.
