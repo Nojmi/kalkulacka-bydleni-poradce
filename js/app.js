@@ -476,7 +476,7 @@ function flatCards(c,r){
   if(T.sell)useC='<div class="card fc"><div class="hd"><b>Prodej</b></div><div class="g3">'+fld('Provize',numInp('flat.sale.comm','%',{kind:'dec',aria:'Provize'}))+fld('Náklady prodeje',numInp('flat.sale.costs','Kč',{aria:'Náklady prodeje'}))+fld('Osvobozeno od daně',seg('exempt',[['1','Ano'],['0','Ne']],f.sale.exempt?'1':'0','lg'))+'</div></div>';
   return {opsC,mortC,fixC,useC};
 }
-function viewByt(c,r){
+function viewByt(c,r,pres){
   const T=r.T,f=c.flat,P=r.P;
   const usage=T.sell?'sell':T.rent?'rent':'none';
   const head='<div class="head"><div class="t"><h1 class="h1 m">Stávající byt</h1><span class="sub">Odhadní cena '+kc(f.est)+' · koupen za '+kc(f.purchase)+'</span></div><div class="row"><span class="mut" style="font-size:14px">Co s bytem po přestěhování</span>'+seg('usage',[['none','Ponechat prázdný'],['sell','Prodat'],['rent','Pronajímat']],usage,'lg')+'</div></div>';
@@ -486,7 +486,7 @@ function viewByt(c,r){
   let right='';
   if(T.mort){
     const diff=r.pmtFix-r.pmtNow;
-    right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Stávající hypotéka</b>'+(T.fix?'<span class="row"><span class="mut" style="font-size:13px">Ve srovnání použít</span>'+seg('useRefix',[['0','Dnešní splátku'],['1','Splátku po refixaci']],c.useRefix?'1':'0')+'</span>':'')+'</div>'
+    right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Stávající hypotéka</b>'+(T.fix&&!pres?'<span class="row"><span class="mut" style="font-size:13px">Ve srovnání použít</span>'+seg('useRefix',[['0','Dnešní splátku'],['1','Splátku po refixaci']],c.useRefix?'1':'0')+'</span>':'')+'</div>'
       +'<div class="g4"><div class="tile"><small>Splátka dnes</small><b>'+kc(r.pmtNow)+'</b><span>sazba '+NF2.format(+f.mort.rate||0)+' %</span></div>'
       +(T.fix?'<div class="tile"><small>Zůstatek na konci fixace</small><b>'+kc(r.balFix)+'</b><span>za '+r.k+' '+pl(r.k,'měsíc','měsíce','měsíců')+'</span></div><div class="tile"><small>Splátka po refixaci</small><b>'+kc(r.pmtFix)+'</b><span>nová sazba '+NF2.format(+f.fix.rate||0)+' %</span></div>'
         +'<div class="tile '+(diff>0.5?'w':'')+'"><small>Změna splátky</small><b>'+(diff>0.5?'▲ ':diff<-0.5?'▼ ':'')+kcd(diff).replace('±','')+'</b><span>měsíčně</span></div>':'<div class="tile" style="grid-column:span 3"><small>Konec fixace</small><b style="font-size:17px">Nezadáno</b><span>Zapněte „Konec fixace“ vlevo</span></div>')+'</div></div>';
@@ -527,7 +527,7 @@ function viewByt(c,r){
     }
     right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Pronájem starého bytu</b><span class="mut" style="font-size:13px">splátka '+(r.useFix?'po refixaci':'dnešní')+'</span></div><div class="mut" style="font-size:13.5px">Od měsíčního nájmu k tomu, co skutečně zbude.</div><div class="wf">'+rowsW+'</div>'+refTab
       +'<p class="fnote">Daň a úroky počítají se zjednodušeným, neověřeným modelem a s dnešním zůstatkem hypotéky. Pojištění hypotéky je pevná, ručně zadaná částka.</p></div>';
-    right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Pronájem: daň krok za krokem '+tRentTax(r)+'</b><span class="row"><span class="mut" style="font-size:13px">Použít</span>'+seg('taxsel',[['A','A'],['B','B'],['C','C']],P.sel)+'</span></div>'+tb
+    if(!pres)right+='<div class="card fc"><div class="hd"><b style="font-size:19px">Pronájem: daň krok za krokem '+tRentTax(r)+'</b><span class="row"><span class="mut" style="font-size:13px">Použít</span>'+seg('taxsel',[['A','A'],['B','B'],['C','C']],P.sel)+'</span></div>'+tb
       +'<div class="nav"><b>Návrh daňové optimalizace</b><span>'+(diffTax>0.5?'Nejnižší daň vychází při variantě '+P.best+' ('+names[P.best].split(' · ')[1].toLowerCase()+'): '+kc(P['tax'+P.best])+' ročně. Oproti použité variantě '+P.sel+' je to o '+kc(diffTax)+' ročně méně (zhruba '+kc(diffTax/12)+' měsíčně). Přepněte „Použít“ nahoře a výsledky se přepočtou.':'Použitá varianta '+P.sel+' je z tří variant nejvýhodnější: '+kc(P.tax)+' ročně.')+'</span></div>'
       +'<p class="fnote">Daň z pronájmu je zjednodušený, neověřený model. Úroky a odpisy jsou odhad, výslednou daň ověřte s daňovým poradcem.</p><div class="g3"><div class="tile"><small>Daň ročně · varianta '+P.sel+'</small><b>'+kc(P.tax)+'</b><span>'+(diffTax>0.5?'varianta '+P.best+' vychází o '+kc(diffTax)+' nižší':'nejnižší z variant')+'</span></div><div class="tile"><small>Čistý příjem z nájmu</small><b>'+kc(P.netM)+' / měs.</b><span>po neobsazenosti, provozu, opravách a dani</span></div><div class="tile"><small>Starý byt po odečtu nájmu</small><b>'+kc(r.oldNet)+' / měs.</b><span>splátka + pojištění + provoz − čistý nájem</span></div></div></div>';
   }
@@ -538,6 +538,7 @@ function viewByt(c,r){
       +'<div class="mut" style="font-size:13px">Zisk '+kc(S_.gain)+(f.sale.exempt?' je osvobozen od daně.':', daň 15 % ze zisku '+kc(S_.tax)+'.')+' Splácí se dnešní zůstatek hypotéky.</div></div>';
   }
   if(!T.rent&&!T.sell)right+='<div class="card"><h2>Byt zůstává prázdný</h2><p class="mut" style="margin-top:8px">Klient platí splátku, pojištění a provoz starého bytu '+kc(r.oldNet)+' měsíčně navíc k novému bydlení. Vyberte Prodat nebo Pronajímat, pokud to chce porovnat.</p></div>';
+  if(pres)return '<div class="page cap"><div class="head"><div class="t"><h1 class="h1 m">Stávající byt</h1><span class="sub">Odhadní cena '+kc(f.est)+' · koupen za '+kc(f.purchase)+' · '+(T.sell?'prodej':T.rent?'pronájem':'zůstává prázdný')+'</span></div></div><div class="stk">'+right+'</div></div>';
   return '<div class="page cap">'+head+'<div class="two">'+left+'<div class="stk">'+right+'</div></div></div>';
 }
 
@@ -738,12 +739,13 @@ function renderModal(){
 
 /* ---------- režim pro klienta ---------- */
 function presentHeader(c){
-  return '<header class="hdr"><span class="logo"><i>KB</i>'+esc(c.name)+' · srovnání bydlení</span><div class="sp"></div>'+seg('presTab',[['prehled','Přehled'],['grafy','Grafy'],['tabulka','Tabulka']],UI.presTab,'lg')+'<button class="btn" data-act="endPresent">Ukončit prezentaci</button></header>'
+  return '<header class="hdr"><span class="logo"><i>KB</i>'+esc(c.name)+' · srovnání bydlení</span><div class="sp"></div>'+seg('presTab',[['prehled','Přehled'],['grafy','Grafy'],['tabulka','Tabulka']].concat(c.t.flat?[['byt','Stávající byt']]:[]),UI.presTab,'lg')+'<button class="btn" data-act="endPresent">Ukončit prezentaci</button></header>'
    +'<div class="note"><b>Orientační výpočet, ne nabídka banky.</b><span>Daň z pronájmu je zjednodušený model. Pojištění hypotéky je odhad.</span></div>';
 }
 function presentBody(c,r){
   const V=r.V,T=r.T,sm=D.summary(c,r);
   if(UI.presTab==='grafy')return viewGrafy(c,r,true);
+  if(UI.presTab==='byt'&&T.flat)return viewByt(c,r,true);
   if(UI.presTab==='tabulka')return '<div class="page"><h1 class="h1" style="font-size:44px">Srovnání variant</h1><div class="card" style="padding:0;overflow:auto">'+compareTable(c,r,true)+'</div></div>';
   if(V.length&&T.flat&&T.buy&&D.scenarios(c,0).list.length)return viewScenare(c,r,true);
   if(!V.length)return '<div class="page"><h1 class="h1">'+esc(c.name)+'</h1><p class="lead">Zatím není zadaná žádná varianta nového bytu.</p></div>';
