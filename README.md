@@ -56,3 +56,7 @@ Demo je zjednodušený, neověřený model a ukázkové hodnoty (Novákovi, Hor�
 ## Označení pro hlášení problémů
 
 V šedém pruhu pod menu je vpravo označení ve tvaru `K-JN2T · v2026-11-18.1`: čtyřmístný kód klienta (stálý, přenáší se i exportem a importem) a verze aplikace. Kliknutím se zkopíruje. Při hlášení chyby pošlete toto označení, záložku a popis, ať je jasné, o kterém klientovi a které verzi je řeč. Číslo verze (`VERSION` v `js/app.js`) se zvyšuje ručně při každém vydání.
+
+## Testovací klienti
+
+Při prvním spuštění je v aplikaci 14 fiktivních klientů, z toho devět „Test 1…9“, kde každý ukazuje jeden stav aplikace (pronájem a návrh daně, refixace brzy i pozdě, byt bez hypotéky, prodej se ztrátou, záporné cashflow, šest variant a další). Přehled a postup testování: [docs/TESTOVACI-KLIENTI.md](docs/TESTOVACI-KLIENTI.md). Už uložená data v prohlížeči se nepřepisují, nové ukázky se jen doplní.

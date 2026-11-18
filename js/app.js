@@ -11,7 +11,7 @@ const DW='clamp(240px,16vw,300px)';
 const loaded=Store.load(window.localStorage);
 const S=loaded.state;                                  // trvalý stav: clients, activeId, lastBackup, changes
 const UI={view:'home',panel:{open:false,vi:0},collapsed:{ins:true},present:false,presTab:'prehled',
-  charts:{},dd:false,ddQ:'',modal:null,editing:null,homeQ:'',homeAll:false,scenVar:0,grafVar:0,srovMain:false,importRes:null,saveWarned:false};
+  charts:{},dd:false,ddQ:'',modal:null,editing:null,homeQ:'',homeAll:true,scenVar:0,grafVar:0,srovMain:false,importRes:null,saveWarned:false};
 const VIEWS=['home','napoveda','prehled','scenare','srovnani','grafy','byt','prijmy'];
 const $=s=>document.querySelector(s);
 const cur=()=>UI.wiz?UI.wiz.draft:(S.clients.find(c=>c.id===S.activeId)||S.clients[0]);
@@ -87,7 +87,7 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const VERSION='2026-11-18.1';
+const VERSION='2026-11-18.2';
 const refCode=c=>(c?'K-'+String(c.id).slice(0,4).toUpperCase()+' · ':'')+'v'+VERSION;
 const refBtn=c=>'<button class="ref" data-act="copyRef" title="Kliknutím zkopírujete označení klienta a verze. Pošlete ho s popisem problému.">'+esc(refCode(c))+' ⧉</button>';
 const note=c=>'<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>'.replace(/<\/div>$/,refBtn(c)+'</div>');

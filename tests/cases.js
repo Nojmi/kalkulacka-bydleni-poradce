@@ -74,7 +74,7 @@ t('parseNum: mezery, čárka, mínus',()=>{eq(KB.parseNum('1 234,5'),1234.5);eq(
 t('formát: kc, kcd, pct, mil',()=>{ok(KB.kc(-1234.4).replace(/\s/g,' ')==='−1 234 Kč');ok(KB.kc(null)==='—');ok(KB.kcd(3157.05).replace(/\s/g,' ')==='+3 157 Kč');ok(KB.pct(0.797)==='79,7 %');ok(KB.mil(5500000)==='5,5 mil.');});
 
 /* E) validace a import */
-t('validate: platná záloha jednoho i všech klientů',()=>{const c=sample('Nov');ok(KB.validate(JSON.stringify(Store.exportPayload([c]))).list.length===1);ok(KB.validate(JSON.stringify(Store.exportPayload(KB.samples()))).list.length===5);});
+t('validate: platná záloha jednoho i všech klientů',()=>{const c=sample('Nov');ok(KB.validate(JSON.stringify(Store.exportPayload([c]))).list.length===1);ok(KB.validate(JSON.stringify(Store.exportPayload(KB.samples()))).list.length===14);});
 t('validate: neplatný JSON, 7 variant, chybí jméno, položky nejsou seznam',()=>{
   ok(KB.validate('{').error);
   const bad=KB.validate(JSON.stringify({clients:[{name:'A',variants:new Array(7).fill({})},{incomes:'x'}]}));
@@ -91,12 +91,12 @@ t('import: výsledky importovaného klienta se shodují s původním',()=>{
   const b=KB.compute(st.clients[st.clients.length-1]);eq(b.V[0].free,a.V[0].free);eq(b.freeNow,a.freeNow);});
 
 /* F) úložiště */
-t('úložiště: uložení a načtení zachová klienty a id',()=>{const m=memStore(),st=Store.seedState();Store.save(m,st);const r=Store.load(m);ok(!r.fresh&&r.state.clients.length===5&&r.state.clients[1].id===st.clients[1].id);eq(KB.compute(r.state.clients[1]).V[0].free,KB.compute(st.clients[1]).V[0].free);});
-t('úložiště: poškozená data → ukázková data a kopie poškozených',()=>{const m=memStore();m.setItem(KB.KEY,'{rozbité');const r=Store.load(m);ok(r.fresh&&r.recovered&&r.state.clients.length===5&&m.m[KB.KEY+'-poskozena']==='{rozbité');});
+t('úložiště: uložení a načtení zachová klienty a id',()=>{const m=memStore(),st=Store.seedState();Store.save(m,st);const r=Store.load(m);ok(!r.fresh&&r.state.clients.length===14&&r.state.clients[1].id===st.clients[1].id);eq(KB.compute(r.state.clients[1]).V[0].free,KB.compute(st.clients[1]).V[0].free);});
+t('úložiště: poškozená data → ukázková data a kopie poškozených',()=>{const m=memStore();m.setItem(KB.KEY,'{rozbité');const r=Store.load(m);ok(r.fresh&&r.recovered&&r.state.clients.length===14&&m.m[KB.KEY+'-poskozena']==='{rozbité');});
 t('úložiště: nedostupné úložiště nespadne',()=>{const bad={getItem(){throw new Error('x');},setItem(){throw new Error('x');}};ok(Store.load(bad).fresh);ok(Store.save(bad,{})===false);});
 t('úložiště: hydrate omezí varianty na 6',()=>{const c=sample('Hor');c.variants=c.variants.concat(c.variants);ok(Store.hydrate(c).variants.length===6);});
 t('duplikace klienta: nové id, nezávislá kopie',()=>{const c=sample('Nov'),d=Store.duplicate(c);ok(d.id!==c.id&&d.variants[0].id!==c.variants[0].id);d.variants[0].price=1;ok(c.variants[0].price===6.9e6);});
-t('obnovení ukázek zachová vlastní klienty',()=>{const st=Store.seedState();const mine=KB.mkClient({name:'Vlastní'});st.clients.push(mine);st.clients[0].savings=1;Store.restoreSamples(st);ok(st.clients.length===6&&st.clients.some(c=>c.id===mine.id)&&st.clients.find(c=>c.name==='Novákovi').savings===2600000);});
+t('obnovení ukázek zachová vlastní klienty',()=>{const st=Store.seedState();const mine=KB.mkClient({name:'Vlastní'});st.clients.push(mine);st.clients[0].savings=1;Store.restoreSamples(st);ok(st.clients.length===15&&st.clients.some(c=>c.id===mine.id)&&st.clients.find(c=>c.name==='Novákovi').savings===2600000);});
 t('názvy souborů exportu',()=>{const d=new Date(2026,10,13);ok(Store.fileNameAll(d)==='kalkulacka-bydleni_vsichni-klienti_2026-11-13.json');ok(Store.fileNameOne({name:'Jana Malá'},d)==='kalkulacka-bydleni_jana-mala_2026-11-13.json');});
 t('stáří zálohy ve dnech',()=>{ok(Store.backupAge({lastBackup:null})===null);ok(Store.backupAge({lastBackup:Date.now()-9*86400000})===9);});
 
@@ -116,7 +116,23 @@ t('časová osa: kumulace po roce odpovídá měsíčnímu zbytku, po fixaci se 
   ok(Math.abs(by('stayRefix').monthly.before-sc.today.freeNow)<0.01,'zůstat po refinancování před refixací = dnešní stav');});
 
 /* H) ukázková data a soukromí */
-t('ukázkoví klienti jsou 5 a prázdný nemá varianty',()=>{const s=KB.samples();ok(s.length===5&&s[4].variants.length===0&&s[1].variants.length===6);});
+t('ukázkoví klienti: 4 původní, 9 testovacích, prázdný nemá varianty',()=>{const s=KB.samples();ok(s.length===14,'počet '+s.length);ok(s.filter(c=>c.name.startsWith('Test')).length===9);ok(sample('Prázdný').variants.length===0&&sample('Hor').variants.length===6);});
+t('testovací klienti ukazují zamýšlené stavy',()=>{
+  const g=n=>{const c=sample(n);return {c,r:KB.compute(c),sc:D.scenarios(c,0)};};
+  let x=g('Test 1');ok(x.r.P.sel==='A'&&x.r.P.best==='C'&&x.r.P.tenant>0&&x.r.V[0].ltv>0.9,'T1');
+  x=g('Test 2');ok(x.r.T.fix&&x.r.k<=12&&!x.r.T.rent&&!x.r.T.sell&&x.sc.list.length===5,'T2');
+  x=g('Test 3');ok(!x.r.T.mort&&x.r.T.sell&&x.r.S.tax>0&&x.r.S.net>0,'T3');
+  x=g('Test 4');ok(!x.r.T.annual&&x.r.V.some(v=>v.free<0)&&D.counts(x.r.W).risk>=2&&D.counts(x.r.W).warn>=1,'T4');
+  x=g('Test 5');ok(x.r.k>12&&x.r.P.sel==='C'&&x.r.P.best==='C'&&x.r.P.netM-x.r.pmtUsed-x.r.mIns>0,'T5');
+  x=g('Test 6');ok(x.r.V.length===6&&D.bestSet(x.r.V.map(v=>v.free),'max').size===2,'T6');
+  x=g('Test 7');ok(x.c.variants.length===0&&x.r.income>0,'T7');
+  x=g('Test 8');ok(!x.r.T.mort&&x.r.T.rent&&x.r.P.best!==x.r.P.sel&&x.r.P.netM>0,'T8');
+  x=g('Test 9');ok(x.r.S.net<0&&D.counts(x.r.W).risk>=2,'T9');
+});
+t('úložiště: starší data dostanou nové testovací klienty, vlastní zůstanou',()=>{
+  const m=memStore(),st=Store.seedState();st.clients=st.clients.filter(c=>!c.name.startsWith('Test'));st.seedV=1;st.clients.push(Object.assign(KB.mkClient({name:'Můj klient'}),{sample:false}));Store.save(m,st);
+  const r=Store.load(m);ok(r.state.clients.some(c=>c.name==='Můj klient')&&r.state.clients.filter(c=>c.name.startsWith('Test')).length===9&&r.state.clients.filter(c=>c.name==='Novákovi').length===1&&r.state.seedV===KB.SEED_V);
+});
 t('v repozitáři nejsou osobní údaje ani cizí služby',()=>{
   const root=path.join(__dirname,'..'),bad=/neumtomas|kalkulackabydleni(?!-poradce)|firebase|neumann|gstatic|googleapis|cdn\./i;
   const files=[];(function walk(d){fs.readdirSync(d,{withFileTypes:true}).forEach(e=>{if(e.name==='.git'||e.name==='node_modules')return;const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(/\.(js|html|css|md|py|json)$/.test(e.name)&&!/tests[\\/]cases\.js$/.test(p))files.push(p);});})(root);

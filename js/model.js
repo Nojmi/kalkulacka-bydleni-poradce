@@ -31,7 +31,9 @@ function mkClient(o){o=o||{};return {id:uid(),name:o.name||'Nový klient',note:o
  t:Object.assign({flat:false,mort:false,fix:false,sell:false,rent:false,buy:true,annual:true},o.t),
  flat:mkFlat(o.flat),useRefix:o.useRefix!==false,variants:o.variants||[],sample:!!o.sample,updated:o.updated||Date.now()};}
 function normalize(c){const n=mkClient(Object.assign({},c,{variants:(Array.isArray(c.variants)?c.variants:[]).map(v=>Object.assign(mkVar(v.name||'Varianta',+v.price||0),v,{id:uid()}))}));n.id=uid();n.sample=false;n.updated=Date.now();return n;}
-function samples(){const now=Date.now(),H=3600000,D=86400000;return [
+function samples(){const now=Date.now(),H=3600000,D=86400000;
+ const E=a=>['Jídlo a drogerie','Doprava','Telefon a internet','Děti','Oblečení','Volný čas','Ostatní'].map((l,i)=>L(l,a[i])),A=a=>['Pojištění auta','Dovolená','Dárky a svátky','Servis auta','Ostatní'].map((l,i)=>L(l,a[i]));
+ return [
  mkClient({sample:true,updated:now-2*H,name:'Novákovi',note:'Chtějí větší byt kvůli druhému dítěti. Starý byt by rádi pronajímali.',savings:2600000,
   incomes:[L('Mzda – Karel',64000),L('Mzda – Eva',46000)],
   expenses:[L('Jídlo a drogerie',16000),L('Doprava',5500),L('Telefon a internet',1400),L('Děti (školka, kroužky)',6000),L('Oblečení',2500),L('Volný čas',4000),L('Spoření a investice',5000)],
@@ -67,8 +69,61 @@ function samples(){const now=Date.now(),H=3600000,D=86400000;return [
   annual:[L('Pojištění auta',11000),L('Dovolená',40000),L('Dárky a svátky',6000),L('Servis auta',8000),L('Ostatní',5000)],
   t:{buy:true,annual:true},
   variants:[mkVar('Praha 9 – Vysočany 2+kk',6500000,{acq:90000,reno:[0,0,80000,20000,0,0,0,0,0,10000],savReno:110000,savMort:1040000,insSold:420,ops:[3400,2600,300,100]})]}),
+
+ /* ---- testovací klienti: každý ukazuje jeden stav, kterého aplikace umí dosáhnout (viz docs/TESTOVACI-KLIENTI.md) ---- */
+ mkClient({sample:true,updated:now-7*D,name:'Test 1 · Pronájem a daň',note:'UKAZUJE: pronájem starého bytu, podíl, který platí vlastník, použitá daň A, ale nejnižší vychází C (návrh daňové optimalizace), refixace za 9 měsíců, nová hypotéka s LTV nad 90 %. KDE: Stávající byt, Scénáře, Přehled.',savings:3000000,
+  incomes:[L('Příjem 1',100000),L('Příjem 2',80000)],
+  expenses:E([14000,6000,1500,5000,3000,6000,4000]),annual:A([20000,60000,15000,10000,6000]),
+  t:{flat:true,mort:true,fix:true,rent:true,buy:true,annual:true},useRefix:false,
+  flat:{est:8250000,purchase:3999000,ops:[L('Fond oprav a správa',7200),L('Energie',2000),L('Pojištění nemovitosti',500)],mort:{balance:3000000,rate:1.8,months:280,ins:1150},fix:{months:9,rate:4.9},rent:{rent:28000,vac:5,repairs:12000,tax:'A',owner:7700}},
+  variants:[mkVar('Byt 4+kk, 121 m²',18500000,{savMort:1500000,insSold:9800,insKept:9800,ops:[6000,4000,800,200]})]}),
+ mkClient({sample:true,updated:now-8*D,name:'Test 2 · Refixace brzy, byt prázdný',note:'UKAZUJE: stávající byt zůstává prázdný, refixace za 10 měsíců (zdraží splátku), scénáře Zůstat a Zůstat po refinancování a dva noví kandidáti. KDE: Scénáře, Stávající byt (Ponechat prázdný), Přehled (Dnes).',savings:1600000,
+  incomes:[L('Mzda',68000),L('Mzda partnera',52000)],expenses:E([15000,5000,1300,4000,2500,4000,3000]),annual:A([12000,45000,10000,8000,5000]),
+  t:{flat:true,mort:true,fix:true,buy:true,annual:true},
+  flat:{est:5500000,purchase:3200000,ops:[L('Fond oprav a správa',3500),L('Energie',2800),L('Pojištění nemovitosti',300)],mort:{balance:2100000,rate:2.3,months:240,ins:400},fix:{months:10,rate:5.2}},
+  variants:[mkVar('Praha 5 – 3+kk',6200000,{acq:90000,reno:[80000,100000,0,20000,0,0,0,0,0,10000],savReno:200000,savMort:1000000,insSold:450,insKept:600,ops:[3800,3000,350,100]}),
+   mkVar('Praha 4 – 4+kk',6900000,{acq:100000,reno:[0,0,0,30000,0,0,0,0,0,10000],savReno:100000,savMort:1300000,insSold:520,insKept:700,ops:[4400,3500,420,120]})]}),
+ mkClient({sample:true,updated:now-9*D,name:'Test 3 · Byt bez hypotéky, prodej s daní',note:'UKAZUJE: stávající byt bez hypotéky (vypnutý přepínač Hypotéka), prodej se zdaněním zisku 15 % (nevyplněno osvobození), čistý výtěžek jde do nového bytu. KDE: Stávající byt (Prodat), Přehled, Grafy (financování).',savings:800000,
+  incomes:[L('Mzda',88000)],expenses:E([10000,4000,900,0,2000,4000,3000]),annual:A([9000,35000,8000,6000,4000]),
+  t:{flat:true,sell:true,buy:true,annual:true},
+  flat:{est:6800000,purchase:3000000,ops:[L('Fond oprav a správa',3300),L('Energie',2600),L('Pojištění nemovitosti',300)],sale:{comm:3,costs:45000,exempt:false}},
+  variants:[mkVar('Praha 6 – 3+1',7900000,{acq:100000,reno:[100000,120000,0,20000,0,0,0,0,0,10000],savReno:150000,savMort:0,insSold:380,ops:[3900,3100,330,100]})]}),
+ mkClient({sample:true,updated:now-10*D,name:'Test 4 · Záporné cashflow a rizika',note:'UKAZUJE: vypnuté roční výdaje, bez stávajícího bytu, malé úspory (použití úspor nad dostupné = Pozor), LTV nad 90 %, záporné cashflow (▼), upozornění seřazená Riziko první. KDE: Přehled, Grafy, Příjmy a výdaje.',savings:200000,
+  incomes:[L('Mzda',52000)],expenses:E([9500,3500,900,3000,1500,3000,2500]),annual:A([]),
+  t:{buy:true,annual:false},
+  variants:[mkVar('Brno – 3+kk',6200000,{acq:80000,reno:[60000,80000,0,0,0,0,0,0,0,10000],savReno:100000,savMort:500000,rate:5.4,insSold:600,ops:[3300,2400,300,100]}),
+   mkVar('Brno – 2+kk',4300000,{acq:60000,savReno:50000,savMort:150000,rate:5.1,insSold:400,ops:[2500,1800,220,80]})]}),
+ mkClient({sample:true,updated:now-11*D,name:'Test 5 · Dlouhá fixace a pronájem',note:'UKAZUJE: refixace až za 30 měsíců (karta pronájmu ukáže jen tabulku po refixaci, bez porovnání do 12 měsíců), pronájem pokrývá hypotéku (přispívá), použitá daň C je nejnižší. KDE: Stávající byt, Scénáře (Pronajímat).',savings:1500000,
+  incomes:[L('Mzda',72000),L('Mzda partnera',45000)],expenses:E([14000,5000,1300,3500,2500,4000,3000]),annual:A([11000,40000,9000,7000,4000]),
+  t:{flat:true,mort:true,fix:true,rent:true,buy:true,annual:true},
+  flat:{est:5800000,purchase:2800000,ops:[L('Fond oprav a správa',3000),L('Energie',2500),L('Pojištění nemovitosti',280)],mort:{balance:1600000,rate:2.9,months:180,ins:350},fix:{months:30,rate:4.4},rent:{rent:23500,vac:0,repairs:9000,tax:'C'}},
+  variants:[mkVar('Plzeň – 3+1',5400000,{acq:70000,reno:[70000,90000,0,20000,0,0,0,0,0,10000],savReno:150000,savMort:1200000,rate:4.6,insSold:420,insKept:550,ops:[3200,2600,300,90]}),
+   mkVar('Plzeň – dům',7300000,{acq:100000,reno:[0,0,0,40000,0,0,0,0,0,20000],savReno:100000,savMort:1300000,rate:4.6,insSold:500,insKept:650,ops:[0,4200,600,150]})]}),
+ mkClient({sample:true,updated:now-12*D,name:'Test 6 · Šest variant, shody a LTV pásma',note:'UKAZUJE: klient bez bytu, šest variant (maximum), LTV pod 80 %, 80 až 90 % a nad 90 %, dvě shodné varianty (obě označené jako nejlepší, shoda). KDE: Přehled, Srovnání, Grafy.',savings:2000000,
+  incomes:[L('Příjem 1',70000),L('Příjem 2',55000)],expenses:E([14000,5000,1300,4000,2500,4000,3000]),annual:A([12000,45000,10000,8000,5000]),
+  t:{buy:true,annual:true},
+  variants:[mkVar('Byt A · LTV pod 80 %',6000000,{acq:90000,savReno:0,savMort:1500000,insSold:450,ops:[3500,2800,300,100]}),
+   mkVar('Byt B · LTV 80 až 90 %',6000000,{acq:90000,savReno:0,savMort:900000,insSold:450,ops:[3500,2800,300,100]}),
+   mkVar('Byt C · LTV nad 90 %',6000000,{acq:90000,savReno:0,savMort:200000,insSold:450,ops:[3500,2800,300,100]}),
+   mkVar('Byt D · shodný s A',6000000,{acq:90000,savReno:0,savMort:1500000,insSold:450,ops:[3500,2800,300,100]}),
+   mkVar('Byt E · dražší',6400000,{acq:95000,savReno:0,savMort:900000,insSold:470,ops:[3600,2900,320,110]}),
+   mkVar('Byt F · větší, dražší',7500000,{acq:110000,savReno:200000,savMort:1000000,insSold:520,ops:[4200,3300,380,120]})]}),
+ mkClient({sample:true,updated:now-13*D,name:'Test 7 · Jen příjmy a výdaje',note:'UKAZUJE: klient bez variant a bez bytu. Přehled ukáže výzvu k přidání varianty, ostatní záložky jsou prázdné a nic se nepočítá. KDE: Přehled, Příjmy a výdaje.',savings:400000,
+  incomes:[L('Mzda',61000)],expenses:E([9000,3000,800,0,1500,3000,2000]),annual:A([8000,30000,6000,5000,3000]),
+  t:{buy:true,annual:true}}),
+ mkClient({sample:true,updated:now-14*D,name:'Test 8 · Pronájem bytu bez hypotéky',note:'UKAZUJE: pronájem bytu bez hypotéky (všechno z nájmu zůstává), daň z pronájmu ve třech variantách a návrh nejnižší, žádná tabulka refixace. KDE: Stávající byt (Pronajímat), Scénáře.',savings:1100000,
+  incomes:[L('Mzda',80000)],expenses:E([11000,4000,900,2500,2000,4000,3000]),annual:A([10000,40000,8000,6000,4000]),
+  t:{flat:true,rent:true,buy:true,annual:true},
+  flat:{est:4600000,purchase:2100000,ops:[L('Fond oprav a správa',3000),L('Energie',2200),L('Pojištění nemovitosti',250)],rent:{rent:19500,vac:5,repairs:10000,tax:'A'}},
+  variants:[mkVar('Rodinný dům, Hostivice',7200000,{acq:100000,reno:[0,0,0,40000,0,0,0,0,0,20000],savReno:100000,savMort:1000000,insSold:600,insKept:800,ops:[0,5000,700,200]})]}),
+ mkClient({sample:true,updated:now-15*D,name:'Test 9 · Prodej se ztrátou',note:'UKAZUJE: prodejní cena nižší než dluh na hypotéce. Čistý výtěžek je záporný, chybějící částku je nutné doplatit, nová hypotéka je vyšší o tento doplatek. KDE: Stávající byt (Prodat), Grafy (financování), Přehled.',savings:700000,
+  incomes:[L('Mzda',70000)],expenses:E([11000,4000,900,2500,2000,4000,3000]),annual:A([9000,35000,7000,6000,4000]),
+  t:{flat:true,mort:true,sell:true,buy:true,annual:true},
+  flat:{est:4200000,purchase:3900000,ops:[L('Fond oprav a správa',3100),L('Energie',2400),L('Pojištění nemovitosti',280)],mort:{balance:4500000,rate:5.2,months:300,ins:500},sale:{comm:3.5,costs:60000,exempt:true}},
+  variants:[mkVar('Praha 10 – 2+kk',5400000,{acq:80000,reno:[50000,70000,0,0,0,0,0,0,0,10000],savReno:100000,savMort:300000,rate:5.1,insSold:480,ops:[3000,2300,280,90]})]}),
  mkClient({sample:true,updated:now-10*60000,name:'Prázdný klient (ukázka)'})];}
-function seed(){const c=samples();return {clients:c,activeId:c[0].id,lastBackup:Date.now()-9*86400000};}
+const SEED_V=2;
+function seed(){const c=samples();return {clients:c,activeId:c[0].id,lastBackup:Date.now()-9*86400000,seedV:SEED_V};}
 function validate(text){let d;try{d=JSON.parse(text);}catch(e){return {error:'Soubor není platný JSON.',details:['Soubor je poškozený nebo nejde o zálohu z Kalkulačky bydlení.','Technický detail: '+e.message]};}
  const list=Array.isArray(d)?d:(d&&Array.isArray(d.clients))?d.clients:(d&&typeof d==='object'&&'name' in d)?[d]:null;
  if(!list||!list.length)return {error:'V souboru nejsou žádní klienti.',details:['Očekávám zálohu jednoho klienta nebo všech klientů (pole „clients“).']};
@@ -108,5 +163,5 @@ const C_PMT='#0072B2',C_INS='repeating-linear-gradient(45deg,#E69F00 0 5px,#f2c6
 const C_SAV='#009E73',C_PRO='repeating-linear-gradient(45deg,#E69F00 0 5px,#f2c66b 5px 9px)',C_MOR='#0072B2';
 
 
-return {RENO,VOPS,KEY,uid,L,sum,getPath,ann,balAfter,kc,kcd,pct,tis,mil,fmtIn,NF,NF2,parseNum,pl,rel,mkVar,mkFlat,mkClient,normalize,samples,seed,validate,compute,C_PMT,C_INS,C_OPS,C_OLD,C_SAV,C_PRO,C_MOR};
+return {RENO,VOPS,KEY,uid,L,sum,getPath,ann,balAfter,kc,kcd,pct,tis,mil,fmtIn,NF,NF2,parseNum,pl,rel,mkVar,mkFlat,mkClient,normalize,samples,seed,SEED_V,validate,compute,C_PMT,C_INS,C_OPS,C_OLD,C_SAV,C_PRO,C_MOR};
 });
