@@ -413,3 +413,6 @@ text .sb{font-size:12.5px;fill:#6b7280}
 
 .nav{display:flex;flex-direction:column;gap:3px;margin:14px 0 4px;padding:11px 14px;background:#eef6f0;border-left:3px solid #1f7a4d;border-radius:8px;font-size:13.5px;line-height:1.45}
 .tx.rf th small{display:block;font-weight:400;font-size:11.5px;color:var(--ink3)}
+
+.tbl th.sct{font-size:13.5px;font-weight:650;color:var(--ink);text-transform:none;letter-spacing:0;text-align:right;vertical-align:bottom;line-height:1.25}
+.tbl th.sct{white-space:normal;overflow:visible;text-overflow:clip;padding-left:10px}
