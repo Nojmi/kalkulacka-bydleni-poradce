@@ -405,9 +405,9 @@ function viewGrafy(c,r,pres){
   const hb=Charts.hbars(rowsH,{today})+'<div class="mut" style="font-size:12.5px;margin-top:8px">Přerušovaná svislá čára = dnešní stav. ◆ nejvíc zbude, ▼ záporné cashflow.</div>';
   const tblFree='<div class="twrap"><table class="tbl sm"><thead><tr><th></th><th>Zbude měsíčně</th><th>Proti dnešku</th></tr></thead><tbody><tr><td>Dnes</td><td>'+kc(today)+'</td><td>—</td></tr>'+V.map(v=>'<tr><td>'+esc(v.name)+'</td><td>'+(v.free<0?'▼ ':'')+kc(v.free)+'</td><td>'+kcd(v.free-today)+'</td></tr>').join('')+'</tbody></table></div>';
   const gv=Math.min(UI.grafVar,V.length-1);const v=Object.assign({idx:gv},V[gv]);
-  const fs=financeSankey(v,r,1700,280);
+  const fs=financeSankey(v,r,720,420);
   const sel=V.length>1?seg('grafVar',V.map((x,i)=>[i,x.name]),gv,''):'';
-  const fl=flowSankey(c,r,v,1700,420);
+  const fl=flowSankey(c,r,v,760,520);
   const note=T.flat?(T.sell?'Dnes = stávající byt před prodejem':'splátka stávající hypotéky '+(r.useFix?'po refixaci':'dnes')):'';
   const dnesTxt=T.flat?'':'';
   return '<div class="page"><div class="head"><div class="t"><h1 class="h1 m">Grafy</h1><span class="sub">'+esc(c.name)+' · tisíce Kč měsíčně'+(note?', '+note:'')+'</span></div>'+(pres?'':'<span class="exp" title="Připravujeme">Export PNG / PDF · připravujeme</span>')+'</div>'
@@ -415,8 +415,10 @@ function viewGrafy(c,r,pres){
    +chartCard('cost','Měsíční náklady na bydlení',Charts.stackedCols(items,leg),tblMonthly)
    +chartCard('free','Kolik měsíčně zbude',hb,tblFree)
    +'</div>'
-   +chartCard('flow','Kam jde příjem'+(T.flat&&T.rent&&!T.sell?' a nájem':'')+' (měsíčně)',fl.svg,Charts.flowTable({nodes:fl.nodes,links:fl.links}),sel)
-   +chartCard('fin','Jak se pořízení financuje',fs.svg,Charts.flowTable({nodes:fs.nodes,links:fs.links}),sel)+'</div>';
+   +(sel?'<div class="row" style="justify-content:flex-end;margin-top:4px"><span class="mut" style="font-size:14px">Varianta v obou grafech</span>'+sel+'</div>':'')
+   +'<div style="display:grid;grid-template-columns:'+(pres?'1fr':'1.15fr 1fr')+';gap:16px;align-items:start">'
+   +chartCard('flow','Kam jde příjem'+(T.flat&&T.rent&&!T.sell?' a nájem':'')+' (měsíčně)',fl.svg,Charts.flowTable({nodes:fl.nodes,links:fl.links}))
+   +chartCard('fin','Jak se pořízení financuje',fs.svg,Charts.flowTable({nodes:fs.nodes,links:fs.links}))+'</div></div>';
 }
 
 /* ---------- scénáře ---------- */
