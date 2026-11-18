@@ -23,7 +23,7 @@ function persist(touch){
   clearTimeout(saveT);
   saveT=setTimeout(()=>{if(!Store.save(window.localStorage,S)&&!UI.saveWarned){UI.saveWarned=true;toast('Data se nepodařilo uložit do prohlížeče. Použijte Exportovat.');}},150);
 }
-function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),3200);}
+function toast(t,undo){const e=$('#toast');e.innerHTML=esc(t)+(undo?' <button class="lnk" data-act="undoDel" style="color:#fff;text-decoration:underline;margin-left:10px">Vrátit zpět</button>':'');e.classList.toggle('un',!!undo);e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>{e.classList.remove('on');UI.undo=null;},undo?8000:3200);}
 
 /* ---------- pomocné ---------- */
 const getP=(o,p)=>p.split('.').reduce((a,k)=>a==null?a:a[k],o);
@@ -87,7 +87,7 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const VERSION='2026-11-18.3';
+const VERSION='2026-11-18.4';
 const refCode=c=>(c?'K-'+String(c.id).slice(0,4).toUpperCase()+' · ':'')+'v'+VERSION;
 const refBtn=c=>'<button class="ref" data-act="copyRef" title="Kliknutím zkopírujete označení klienta a verze. Pošlete ho s popisem problému.">'+esc(refCode(c))+' ⧉</button>';
 const note=c=>'<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>'.replace(/<\/div>$/,refBtn(c)+'</div>');
@@ -129,8 +129,9 @@ function viewHome(){
   const fx=D.nearestFix(S.clients);
   const rowsH=list.map(x=>{
     const n=x.c.variants.length,cn=D.counts(x.r.W);
-    return '<button class="cr" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r)+' · '+n+' '+pl(n,'varianta','varianty','variant'))+' · '+refCode(x.c).split(' · ')[0]+'</small></span>'
-      +(cn.risk?'<span class="pill r">■ riziko</span>':'')+'<span class="tm">'+relShort(x.c.updated)+'</span><span class="ar">→</span></button>';
+    return '<div class="cr"><button class="crm" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r)+' · '+n+' '+pl(n,'varianta','varianty','variant'))+' · '+refCode(x.c).split(' · ')[0]+(x.c.note?' · '+esc(x.c.note.length>40?x.c.note.slice(0,40)+'…':x.c.note):'')+'</small></span>'
+      +(cn.risk?'<span class="pill r">■ riziko</span>':'')+'<span class="tm">'+relShort(x.c.updated)+'</span></button>'
+      +'<span class="ca"><button class="btn sm" data-act="editClient" data-id="'+x.c.id+'" aria-label="Upravit '+esc(x.c.name)+'">Upravit</button><button class="btn sm" data-act="dupRow" data-id="'+x.c.id+'" aria-label="Duplikovat '+esc(x.c.name)+'">Duplikovat</button><button class="btn sm" data-act="delRow" data-id="'+x.c.id+'" aria-label="Smazat '+esc(x.c.name)+'" style="color:var(--risk)">Smazat</button></span></div>';
   }).join('')||'<p class="mut" style="padding:14px">Žádný klient neodpovídá hledání.</p>';
   const ch=S.changes||0;
   return '<div class="page"><div class="home"><div><h1>Dobrý den</h1><p class="q">Koho dnes připravujete?</p></div>'
@@ -714,7 +715,7 @@ function renderDD(){
    +'<div class="meta"><span>Klienti · '+S.clients.length+'</span><i>seřazeno podle poslední úpravy</i></div><div class="list" role="listbox">'
    +(list.map(x=>{const r=compute(x),n=x.variants.length,cn=D.counts(r.W),tot=r.W.length;
      return '<button class="li'+(x.id===c.id?' on':'')+'" role="option" aria-selected="'+(x.id===c.id)+'" data-act="open" data-id="'+x.id+'"><span class="av lg '+(x.id===c.id?'on':'g')+'">'+esc(D.initials(x.name))+'</span><div><b>'+esc(x.name)+'</b><small>'+(D.isEmpty(x,r)?'nevyplněno':n+' '+pl(n,'varianta','varianty','variant')+' · '+D.situation(x,r))+' · '+(x.id===c.id?rel(x.updated):relShort(x.updated))+'</small></div>'+(tot?(cn.risk?'<span class="pill r">■ '+tot+' '+pl(tot,'upozornění','upozornění','upozornění')+'</span>':'<span class="pill w">▲ '+tot+' '+pl(tot,'upozornění','upozornění','upozornění')+'</span>'):'')+'</button>';}).join('')||'<p class="mut" style="padding:14px">Nikdo nenalezen.</p>')
-   +'</div><div class="ft"><div class="r2"><button class="btn blk" data-act="newClient">+ Nový klient</button><button class="btn" data-act="dupClient">Duplikovat '+esc(c.name)+'</button></div>'
+   +'</div><div class="ft"><div class="r2"><button class="btn blk" data-act="newClient">+ Nový klient</button><button class="btn" data-act="editClient" data-id="'+c.id+'">Upravit</button><button class="btn" data-act="dupClient">Duplikovat</button><button class="btn" data-act="delRow" data-id="'+c.id+'" style="color:var(--risk)">Smazat</button></div>'
    +'<div class="ls"><button class="lnk" data-act="importOpen">Importovat…</button><button class="lnk" data-act="backup">Exportovat všechny</button><button class="mut" data-act="restoreSamples" style="font-weight:500;font-size:13px">Obnovit ukázková data</button></div></div>'
    +'<div class="bkw'+(old?'':' ok')+'">'+(old?'<b>▲ Poslední záloha '+(d==null?'nikdy':'před '+d+' dny')+'.</b> ':'')+'Data jsou jen v tomto prohlížeči, záloha je jediná ochrana.</div>';
 }
@@ -722,8 +723,11 @@ function renderModal(){
   const el=$('#dlg'),m=UI.modal;
   el.classList.toggle('on',!!m);
   if(!m){el.innerHTML='';return;}
-  const c=cur();
-  if(m.type==='import'){
+  const c=m.id?(S.clients.find(x=>x.id===m.id)||cur()):cur();
+  if(m.type==='edit'){
+    el.innerHTML='<div class="m" role="dialog" aria-modal="true" aria-label="Upravit klienta"><div class="hd"><h2>Upravit klienta</h2><button class="cl" data-act="closeModal" aria-label="Zavřít">×</button></div><div class="fc">'+fld('Jméno','<label class="inp"><input id="ecName" value="'+esc(c.name)+'" aria-label="Jméno klienta" autocomplete="off"></label>')+fld('Poznámka','<label class="inp ta"><textarea id="ecNote" rows="3" aria-label="Poznámka">'+esc(c.note||'')+'</textarea></label>')+'<p class="fnote">Kód klienta '+esc(refCode(c).split(' · ')[0])+' se nemění.</p></div><div class="acts"><button class="btn" data-act="closeModal">Zrušit</button><button class="btn blk" data-act="editSave">Uložit</button></div></div>';
+    setTimeout(()=>{const i=$('#ecName');if(i&&document.activeElement!==i){i.focus();i.select();}},0);
+  }else if(m.type==='import'){
     const res=UI.importRes;
     let msg='';
     if(res&&!res.ok)msg='<div class="errb" role="alert"><h3>■ '+esc(res.error)+'</h3><span class="mut" style="font-size:13px">'+esc(res.file||'')+(res.count!=null?' · '+res.count+' '+pl(res.count,'klient','klienti','klientů')+' v souboru':'')+'</span><ul>'+res.details.map(d=>'<li>'+esc(d)+'</li>').join('')+'</ul><p>Zkontrolujte, že jde o nezměněný soubor z exportu. Ruční úpravy JSON mohou zálohu poškodit.</p></div>';
@@ -732,7 +736,7 @@ function renderModal(){
      +'<div class="drop" id="drop"><b>Přetáhněte soubor sem</b><span class="mut" style="font-size:14px">nebo <button class="lnk" data-act="pickFile">vyberte z počítače</button></span><input type="file" id="file" accept=".json,application/json" class="sr" tabindex="-1"></div>'+msg
      +'<div class="acts"><button class="btn" data-act="closeModal">Zavřít</button>'+(res&&!res.ok?'<button class="btn blk" data-act="pickFile">Vybrat jiný soubor</button>':'')+'</div></div>';
   }else if(m.type==='delete'){
-    el.innerHTML='<div class="m" role="dialog" aria-modal="true" aria-label="Smazat natrvalo"><div class="hd"><h2>Smazat natrvalo</h2><button class="cl" data-act="closeModal" aria-label="Zavřít">×</button></div><p style="color:var(--ink2)">Klient <b>'+esc(c.name)+'</b> se smaže z tohoto prohlížeče a nejde vrátit. Doporučujeme nejdřív exportovat.</p><div class="acts"><button class="btn" data-act="exportOne">Exportovat klienta</button><button class="btn" data-act="closeModal">Zrušit</button><button class="btn red" data-act="delConfirm">Smazat natrvalo</button></div></div>';
+    el.innerHTML='<div class="m" role="dialog" aria-modal="true" aria-label="Smazat natrvalo"><div class="hd"><h2>Smazat natrvalo</h2><button class="cl" data-act="closeModal" aria-label="Zavřít">×</button></div><p style="color:var(--ink2)">Klient <b>'+esc(c.name)+'</b> se smaže z tohoto prohlížeče. Hned po smazání půjde na pár vteřin vrátit zpět, potom už ne. Doporučujeme nejdřív exportovat.</p><div class="acts"><button class="btn" data-act="exportOne" data-id="'+c.id+'">Exportovat klienta</button><button class="btn" data-act="closeModal">Zrušit</button><button class="btn red" data-act="delConfirm">Smazat natrvalo</button></div></div>';
   }else if(m.type==='wizcancel'){
     el.innerHTML='<div class="m" role="dialog" aria-modal="true" aria-label="Zrušit zakládání klienta"><div class="hd"><h2>Zrušit zakládání klienta?</h2><button class="cl" data-act="closeModal" aria-label="Zavřít">×</button></div><p style="color:var(--ink2)">Zatím zadané údaje se zahodí, klient se nevytvoří.</p><div class="acts"><button class="btn" data-act="closeModal">Pokračovat ve vyplňování</button><button class="btn blk" data-act="wizDiscard" style="background:var(--risk)">Zahodit a zrušit</button></div></div>';
   }else if(m.type==='restore'){
@@ -813,8 +817,13 @@ A.wizFinish=()=>{
 A.wizCancel=()=>{UI.modal={type:'wizcancel'};};
 A.wizDiscard=()=>{UI.wiz=null;UI.modal=null;UI.panel.open=false;UI.view='home';history.replaceState(null,'','#home');window.scrollTo(0,0);toast('Zakládání klienta zrušeno');};
 A.dupClient=()=>{const c=cur();const n=Store.duplicate(c);S.clients.unshift(n);S.activeId=n.id;S.changes=(S.changes||0)+1;UI.dd=false;UI.view='prehled';persist();toast('Klient zduplikován');};
-A.delClient=()=>{UI.modal={type:'delete'};};
-A.delConfirm=()=>{const c=cur();S.clients=S.clients.filter(x=>x.id!==c.id);UI.modal=null;S.changes=(S.changes||0)+1;if(!S.clients.length){const n=mkClient({name:'Nový klient'});S.clients.push(n);}S.activeId=S.clients[0].id;UI.view='home';persist();toast('Klient smazán');};
+A.delClient=()=>{UI.modal={type:'delete',id:cur().id};};
+A.delRow=t=>{UI.dd=false;UI.modal={type:'delete',id:t.dataset.id};};
+A.dupRow=t=>{const c=S.clients.find(x=>x.id===t.dataset.id);if(!c)return;const n=Store.duplicate(c);S.clients.unshift(n);S.changes=(S.changes||0)+1;persist();toast('Klient zduplikován: '+n.name);};
+A.editClient=t=>{UI.dd=false;UI.modal={type:'edit',id:(t&&t.dataset&&t.dataset.id)||cur().id};};
+A.editSave=()=>{const m=UI.modal,c=m&&S.clients.find(x=>x.id===m.id);if(!c)return;const nm=($('#ecName').value||'').trim();if(!nm){toast('Jméno klienta nesmí být prázdné');return;}c.name=nm;c.note=($('#ecNote').value||'').trim();UI.modal=null;persist(true);toast('Klient upraven');};
+A.delConfirm=()=>{const m=UI.modal,i=S.clients.findIndex(x=>x.id===(m&&m.id));if(i<0){UI.modal=null;return;}const c=S.clients[i];UI.undo={c,i,active:S.activeId};S.clients.splice(i,1);UI.modal=null;S.changes=(S.changes||0)+1;if(!S.clients.length){S.clients.push(mkClient({name:'Nový klient'}));}if(S.activeId===c.id||!S.clients.find(x=>x.id===S.activeId))S.activeId=S.clients[0].id;if(UI.view!=='home'&&S.activeId!==UI.undo.active)UI.view='home';persist();toast('Klient smazán: '+c.name,true);};
+A.undoDel=()=>{const u=UI.undo;if(!u)return;UI.undo=null;S.clients.splice(Math.min(u.i,S.clients.length),0,u.c);S.activeId=u.active&&S.clients.find(x=>x.id===u.active)?u.active:u.c.id;S.changes=(S.changes||0)+1;persist();$('#toast').classList.remove('on');};
 A.closeModal=()=>{UI.modal=null;UI.importRes=null;};
 A.importOpen=()=>{UI.dd=false;UI.importRes=null;UI.modal={type:'import'};};
 A.pickFile=()=>{const f=$('#file');if(f)f.click();};
@@ -824,7 +833,7 @@ function download(name,obj){
   const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
 }
-A.exportOne=()=>{const c=cur();download(Store.fileNameOne(c),Store.exportPayload([c]));toast('Exportováno: '+c.name);};
+A.exportOne=t=>{const c=(t&&t.dataset&&t.dataset.id&&S.clients.find(x=>x.id===t.dataset.id))||cur();download(Store.fileNameOne(c),Store.exportPayload([c]));toast('Exportováno: '+c.name);};
 A.backup=()=>{download(Store.fileNameAll(),Store.exportPayload(S.clients));S.lastBackup=Date.now();S.changes=0;persist();toast('Záloha všech klientů uložena');};
 A.present=()=>{UI.present=true;UI.dd=false;UI.panel.open=false;UI.presTab='prehled';window.scrollTo(0,0);};
 A.endPresent=()=>{UI.present=false;};

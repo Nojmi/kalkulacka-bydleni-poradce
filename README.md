@@ -52,6 +52,10 @@ Splátka, zůstatek po refixaci a čistý nájem se počítají stejně. Daň z 
 
 Demo je zjednodušený, neověřený model a kontrolní hodnoty v testech (tests/fixtures.js) na tom stojí.
 
+## Správa klientů
+
+V seznamu na úvodní obrazovce i v rozbalovátku klientů jde klienta **upravit** (jméno, poznámka; kód `K-XXXX` se nemění), **duplikovat** a **smazat**. Smazání vyžaduje potvrzení (s nabídkou exportu) a po něm je 8 vteřin tlačítko **Vrátit zpět**. Po obnovení stránky už vrátit nejde, proto zálohujte.
+
 ## Označení pro hlášení problémů
 
 V šedém pruhu pod menu je vpravo označení ve tvaru `K-JN2T · v2026-11-18.1`: čtyřmístný kód klienta (stálý, přenáší se i exportem a importem) a verze aplikace. Kliknutím se zkopíruje. Při hlášení chyby pošlete toto označení, záložku a popis, ať je jasné, o kterém klientovi a které verzi je řeč. Číslo verze (`VERSION` v `js/app.js`) se zvyšuje ručně při každém vydání.

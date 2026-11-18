@@ -127,6 +127,17 @@ with sync_playwright() as p:
     p2.goto(URL); p2.wait_for_timeout(300)
     names = p2.locator('.cr b').all_inner_texts()
     check(names == ['Kučerovi', 'Dostálovi', 'Marešovi'], 'výchozí data: tři ukázkoví klienti ' + str(names))
+    # správa klientů: úprava, smazání, vrácení zpět
+    p2.click('.cr >> nth=0 >> text=Upravit'); p2.wait_for_timeout(200)
+    p2.fill('#ecName', 'Kučerovi upr.'); p2.fill('#ecNote', 'nová poznámka'); p2.click('text=Uložit'); p2.wait_for_timeout(300)
+    n2 = p2.locator('.cr b').all_inner_texts()
+    check('Kučerovi upr.' in n2, 'úprava klienta změní jméno v seznamu ' + str(n2))
+    p2.click('.cr >> nth=0 >> text=Smazat'); p2.wait_for_timeout(200)
+    check(p2.locator('.m').count() == 1, 'smazání z řádku otevře potvrzení')
+    p2.click('button:has-text("Smazat natrvalo")'); p2.wait_for_timeout(300)
+    check(p2.locator('.cr').count() == 2, 'po smazání zbyli dva klienti ' + str(p2.locator('.cr b').all_inner_texts()) + str(p2.locator('.m').count()))
+    p2.click('text=Vrátit zpět'); p2.wait_for_timeout(300)
+    check(p2.locator('.cr').count() == 3, 'vrácení zpět obnoví klienta')
     for nm in names:
         p2.goto(URL); p2.wait_for_timeout(150); p2.locator('.cr', has_text=nm).first.click(); p2.wait_for_timeout(120)
         bad = False

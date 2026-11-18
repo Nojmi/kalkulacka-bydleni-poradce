@@ -312,7 +312,9 @@ a{color:var(--link);text-decoration:none}
 .act b{font-size:18px;font-weight:650}.act span{font-size:13.5px;color:var(--ink3)}
 .act.blk{background:var(--ink);border-color:var(--ink);color:#fff}.act.blk span{color:#b8bdc5}.act.blk:hover{background:#2a2e34}
 .hg{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
-.cr{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;width:100%;text-align:left}
+.cr{display:flex;align-items:center;gap:8px;padding:4px 8px 4px 0;border-radius:14px;width:100%;text-align:left}
+.crm{display:flex;align-items:center;gap:14px;padding:8px 6px 8px 14px;flex:1;min-width:0;text-align:left;border-radius:14px}
+.ca{display:flex;gap:6px;flex:none;opacity:.55;transition:opacity .15s}.cr:hover .ca,.cr:focus-within .ca{opacity:1}
 .cr:hover{background:var(--field)}.cr:first-of-type{background:var(--field)}
 .cr .i{flex:1;min-width:0}.cr .i b{display:block;font-weight:650}.cr .i small{color:var(--ink3);font-size:13.5px}
 .cr .tm{font-size:13px;color:var(--ink4)}.cr .ar{color:var(--ink4)}
@@ -432,3 +434,5 @@ text .sb{font-size:12.5px;fill:#6b7280}
 
 .note .ref{margin-left:auto;flex:none;border:0;background:transparent;font:inherit;font-size:12px;color:#6b727b;cursor:pointer;padding:4px 8px;border-radius:6px;font-variant-numeric:tabular-nums}
 .note .ref:hover{background:#e3e6ea;color:var(--ink)}
+
+#toast.un{pointer-events:auto}
