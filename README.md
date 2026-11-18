@@ -37,6 +37,6 @@ Kontrolní příklady: `docs/KONTROLNI-PRIKLADY.md`.
 
 ## Pronájem starého bytu: podíl nájemníka, refixace, daň
 
-- **Z provozu hradí nájemník** (Kč/měs.): u pronájmu se od provozu bytu odečte část, kterou platí nájemník (typicky energie). Vlastníkovi zůstává zbytek, ten vstupuje do čistého nájmu, daně i „Starý byt po odečtu nájmu". Výchozí hodnota je 0.
+- **Z provozu platí vlastník** (Kč/měs.): při pronájmu se jako náklad vlastníka počítá jen tato částka (typicky fond oprav, správa, pojištění domu), zbytek provozu hradí nájemník. Vstupuje do čistého nájmu, daně i „Starý byt po odečtu nájmu". Prázdné nebo 0 = celý provoz platí vlastník.
 - **Před a po refixaci**: pokud fixace končí do 12 měsíců, karta pronájmu ukáže sloupce Dnes / Po refixaci / Změna a součet prvních 12 měsíců. Při delší fixaci zůstává jednoduchá tabulka „po refixaci".
 - **Návrh daňové optimalizace**: text pod tabulkou daně řekne, která varianta (A, B, C) vychází nejníže a o kolik méně než ta použitá. Variantu nepřepíná, jen navrhuje.
