@@ -87,7 +87,7 @@ function header(c,r){
    +'<div class="sp"></div><button class="lnk" data-act="help" style="white-space:nowrap">Nápověda</button><button class="bk'+(bkOld()?' old':'')+'" data-act="backup">'+backupLabel()+'</button>'
    +'<button class="btn" data-act="exportOne">Exportovat</button><button class="btn blk" data-act="present">Prezentovat klientovi</button></header>';
 }
-const VERSION='2026-11-18.4';
+const VERSION='2026-11-18.5';
 const refCode=c=>(c?'K-'+String(c.id).slice(0,4).toUpperCase()+' · ':'')+'v'+VERSION;
 const refBtn=c=>'<button class="ref" data-act="copyRef" title="Kliknutím zkopírujete označení klienta a verze. Pošlete ho s popisem problému.">'+esc(refCode(c))+' ⧉</button>';
 const note=c=>'<div class="note"><b>Orientační výpočet, ne nabídka banky</b><span>Omezení výpočtu jsou u příslušných čísel, ikona ⓘ ukáže, jak se číslo spočítalo</span></div>'.replace(/<\/div>$/,refBtn(c)+'</div>');
@@ -129,9 +129,9 @@ function viewHome(){
   const fx=D.nearestFix(S.clients);
   const rowsH=list.map(x=>{
     const n=x.c.variants.length,cn=D.counts(x.r.W);
-    return '<div class="cr"><button class="crm" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r)+' · '+n+' '+pl(n,'varianta','varianty','variant'))+' · '+refCode(x.c).split(' · ')[0]+(x.c.note?' · '+esc(x.c.note.length>40?x.c.note.slice(0,40)+'…':x.c.note):'')+'</small></span>'
+    return '<div class="cr"><button class="crm" data-act="open" data-id="'+x.c.id+'"><span class="av lg">'+esc(D.initials(x.c.name))+'</span><span class="i"><b>'+esc(x.c.name)+'</b><small>'+(D.isEmpty(x.c,x.r)?'nevyplněno':D.situation(x.c,x.r)+' · '+n+' '+pl(n,'varianta','varianty','variant'))+' · '+refCode(x.c).split(' · ')[0]+(x.c.note?' · '+esc(x.c.note.length>24?x.c.note.slice(0,24)+'…':x.c.note):'')+'</small></span>'
       +(cn.risk?'<span class="pill r">■ riziko</span>':'')+'<span class="tm">'+relShort(x.c.updated)+'</span></button>'
-      +'<span class="ca"><button class="btn sm" data-act="editClient" data-id="'+x.c.id+'" aria-label="Upravit '+esc(x.c.name)+'">Upravit</button><button class="btn sm" data-act="dupRow" data-id="'+x.c.id+'" aria-label="Duplikovat '+esc(x.c.name)+'">Duplikovat</button><button class="btn sm" data-act="delRow" data-id="'+x.c.id+'" aria-label="Smazat '+esc(x.c.name)+'" style="color:var(--risk)">Smazat</button></span></div>';
+      +'<span class="rm"><button class="kb" data-act="rowMenu" data-id="'+x.c.id+'" aria-label="Akce pro '+esc(x.c.name)+'" aria-haspopup="menu" aria-expanded="'+(UI.rowMenu===x.c.id)+'">⋮</button>'+(UI.rowMenu===x.c.id?'<span class="mn" role="menu"><button role="menuitem" data-act="editClient" data-id="'+x.c.id+'">Upravit</button><button role="menuitem" data-act="dupRow" data-id="'+x.c.id+'">Duplikovat</button><button role="menuitem" data-act="exportOne" data-id="'+x.c.id+'">Exportovat</button><button role="menuitem" class="dn" data-act="delRow" data-id="'+x.c.id+'">Smazat…</button></span>':'')+'</span></div>';
   }).join('')||'<p class="mut" style="padding:14px">Žádný klient neodpovídá hledání.</p>';
   const ch=S.changes||0;
   return '<div class="page"><div class="home"><div><h1>Dobrý den</h1><p class="q">Koho dnes připravujete?</p></div>'
@@ -140,14 +140,55 @@ function viewHome(){
    +'<button class="act" data-act="importOpen"><b>Importovat zálohu</b><span>Soubor JSON, nic se nepřepíše</span></button>'
    +'<button class="act" data-act="backup"><b>Zálohovat všechny</b><span>'+(S.lastBackup?'Naposledy '+(days()===0?'dnes':'před '+days()+' '+pl(days(),'dnem','dny','dny')):'Zatím nezálohováno')+', od té doby '+ch+' '+pl(ch,'změna','změny','změn')+'</span></button></div>'
    +'<button class="helpbar" data-act="help"><span class="hi">?</span><span class="ht"><b>Jak aplikace funguje</b><small>Schéma celé aplikace: co zadat, co se počítá a kde co najdete. Pro každého, kdo ji otevře poprvé.</small></span><span class="ar">→</span></button>'
-   +'<div class="hg"><div class="card"><div class="rowb"><h2>Naposledy upravení</h2>'+(UI.homeAll||q?'':'<button class="lnk" data-act="homeAll">Všichni klienti ('+S.clients.length+')</button>')+'</div><div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">'+rowsH+'</div></div>'
-   +'<div class="card"><h2>V číslech</h2><div class="nums">'
-   +'<div class="tile"><small>Klientů</small><b>'+S.clients.length+'</b><span>z toho '+empty+' '+pl(empty,'nevyplněný','nevyplněné','nevyplněných')+'</span></div>'
-   +'<div class="tile"><small>Zvažovaných bytů</small><b>'+vars.length+'</b><span>'+(vars.length?'průměrná cena '+mil(avg):'zatím žádný')+'</span></div>'
-   +'<div class="tile"><small>Klienti s rizikem</small><b>'+risky.length+'</b><span>'+(risky.length?esc(risky.map(x=>x.c.name).join(', ')):'žádný')+'</span></div>'
-   +'<div class="tile"><small>Nejbližší konec fixace</small><b>'+(fx?'za '+fx.months+' měs.':'—')+'</b><span>'+(fx?esc(fx.name)+', splátka '+kcd(fx.delta):'žádná fixace')+'</span></div>'
-   +'</div></div></div></div></div>';
+   +homeTop(rs)+'<div class="hg"><div class="card"><div class="rowb"><h2>Naposledy upravení</h2>'+(UI.homeAll||q?'':'<button class="lnk" data-act="homeAll">Všichni klienti ('+S.clients.length+')</button>')+'</div><div style="margin-top:10px;display:flex;flex-direction:column;gap:2px">'+rowsH+'</div></div>'
+   +homeSide(rs)+'</div>'+homeBottom(rs)+'</div></div>';
 }
+function homeData(rs){
+  const rows=rs.map(({c,r})=>{
+    const sm=D.summary(c,r),bi=sm.best,bv=bi>=0?r.V[bi]:null;
+    let sens=null;
+    if(bv||r.T.fix){const c2=JSON.parse(JSON.stringify(c));c2.variants.forEach(v=>{v.rate=(+v.rate||0)+1;});c2.flat.fix.rate=(+c2.flat.fix.rate||0)+1;const r2=compute(c2);sens=bv&&r2.V[bi]?r2.V[bi].total-bv.total:(r.T.fix&&c.useRefix?r2.pmtFix-r.pmtFix:0);}
+    return {c,r,bv,sens,tax:(r.T.rent&&r.P&&r.P.inc>0)?Math.max(0,r.P.tax-r.P['tax'+r.P.best]):0};
+  });
+  return rows;
+}
+function bandRows(vals,cuts,labels){const n=labels.map(()=>0);vals.forEach(v=>{let i=0;while(i<cuts.length&&v>cuts[i])i++;n[i]++;});return n;}
+function homeTop(rs){
+  const d=homeData(rs),withNew=d.filter(x=>x.bv),newVol=withNew.reduce((a,x)=>a+x.bv.mortgage,0);
+  const oldVol=rs.reduce((a,x)=>a+(x.r.T.mort?num(x.c.flat.mort.balance):0),0);
+  const vars=S.clients.reduce((a,c)=>a.concat(c.variants.filter(v=>(+v.price||0)>0)),[]);
+  const empty=rs.filter(x=>D.isEmpty(x.c,x.r)).length;
+  const sav=d.reduce((a,x)=>a+x.tax,0);
+  const t=(k,v,sub,cl)=>'<div class="tile'+(cl?' '+cl:'')+'"><small>'+k+'</small><b>'+v+'</b><span>'+sub+'</span></div>';
+  return '<div class="kpi">'+t('Klientů',S.clients.length,empty?'z toho '+empty+' '+pl(empty,'nevyplněný','nevyplněné','nevyplněných'):'všichni vyplnění')
+   +t('Objem nových hypoték',withNew.length?mil(newVol):'—','nejvýhodnější varianta každého klienta, '+withNew.length+' '+pl(withNew.length,'klient','klienti','klientů'))
+   +t('Stávající hypotéky',oldVol?mil(oldVol):'—','zbývající jistina u starých bytů')
+   +t('Zvažovaných bytů',vars.length,vars.length?'průměrná cena '+mil(vars.reduce((a,v)=>a+num(v.price),0)/vars.length):'zatím žádný')
+   +t('Možná úspora na dani',sav>0?kc(sav):'—',sav>0?'ročně, při nejlevnějším způsobu zdanění pronájmu':'nic k optimalizaci')+'</div>';
+}
+function homeSide(rs){
+  const d=homeData(rs);
+  const fx=d.filter(x=>x.r.T.fix&&(+x.c.flat.fix.months||0)>0&&+x.c.flat.fix.months<=12).sort((a,b)=>a.c.flat.fix.months-b.c.flat.fix.months);
+  const cal='<div class="card"><h2>Kalendář fixací</h2><p class="fnote" style="margin:4px 0 8px">Konce fixace v nejbližších 12 měsících</p>'
+   +(fx.length?'<table class="mt"><thead><tr><th>Za</th><th>Klient</th><th class="n">Splátka po refixaci</th></tr></thead><tbody>'+fx.map(x=>{const dl=x.r.pmtFix-x.r.pmtNow;return '<tr><td><b>'+x.c.flat.fix.months+' měs.</b></td><td>'+esc(x.c.name)+'</td><td class="n"><b class="'+(dl>0?'neg':'')+'">'+kcd(dl)+'</b></td></tr>';}).join('')+'</tbody></table>':'<p class="mut" style="margin:6px 0 0">V příštích 12 měsících nic nekončí.</p>')+'</div>';
+  const bv=d.filter(x=>x.bv);
+  const L=['do 80 %','80–90 %','nad 90 %'],ln=bandRows(bv.map(x=>x.bv.ltv||0),[0.8,0.9],L);
+  const dv=bv.filter(x=>x.bv.dsti!=null),D2=['do 35 %','35–45 %','nad 45 %'],dn=bandRows(dv.map(x=>x.bv.dsti),[0.35,0.45],D2);
+  const bar=(lab,n,tot,cl)=>'<div class="rb"><span>'+lab+'</span><i><u class="'+cl+'" style="width:'+(tot?Math.round(n/tot*100):0)+'%"></u></i><b>'+n+'</b></div>';
+  const risk='<div class="card"><h2>Rozložení rizik</h2><p class="fnote" style="margin:4px 0 8px">Nejvýhodnější varianta každého klienta</p>'
+   +(bv.length?'<small class="mut">LTV (výše hypotéky k ceně bytu)</small>'+L.map((l,i)=>bar(l,ln[i],bv.length,['ok','w','r'][i])).join('')+'<small class="mut" style="display:block;margin-top:10px">Splátky z příjmu</small>'+D2.map((l,i)=>bar(l,dn[i],dv.length,['ok','w','r'][i])).join(''):'<p class="mut" style="margin:6px 0 0">Zatím žádná varianta k vyhodnocení.</p>')+'</div>';
+  return '<div style="display:flex;flex-direction:column;gap:16px">'+cal+risk+'</div>';
+}
+function homeBottom(rs){
+  const d=homeData(rs),sn=d.filter(x=>x.sens!=null&&x.sens!==0).sort((a,b)=>b.sens-a.sens),mx=Math.max(1,...sn.map(x=>Math.abs(x.sens)));
+  const tx=d.filter(x=>x.tax>0);
+  const sens='<div class="card"><h2>Citlivost na sazby</h2><p class="fnote" style="margin:4px 0 8px">O kolik by se zvýšilo měsíční bydlení při sazbách o 1 p.b. vyšších</p>'
+   +(sn.length?sn.map(x=>'<div class="rb"><span>'+esc(x.c.name)+'</span><i><u class="w" style="width:'+Math.round(Math.abs(x.sens)/mx*100)+'%"></u></i><b>'+kcd(x.sens)+'</b></div>').join(''):'<p class="mut" style="margin:6px 0 0">Zatím není co vyhodnotit.</p>')+'</div>';
+  const tax='<div class="card"><h2>Daň z pronájmu</h2><p class="fnote" style="margin:4px 0 8px">Rozdíl mezi zvoleným a nejlevnějším způsobem zdanění, ročně</p>'
+   +(tx.length?'<table class="mt"><thead><tr><th>Klient</th><th>Zvoleno</th><th>Nejlepší</th><th class="n">Úspora</th></tr></thead><tbody>'+tx.map(x=>'<tr><td>'+esc(x.c.name)+'</td><td>'+x.r.P.sel+'</td><td>'+x.r.P.best+'</td><td class="n"><b>'+kc(x.tax)+'</b></td></tr>').join('')+'</tbody></table>':'<p class="mut" style="margin:6px 0 0">U všech pronajímaných bytů je už zvolený nejlevnější způsob.</p>')+'</div>';
+  return '<div class="hg2">'+sens+tax+'</div>';
+}
+
 
 /* ---------- přehled ---------- */
 function stackBar(parts){
@@ -818,6 +859,7 @@ A.wizCancel=()=>{UI.modal={type:'wizcancel'};};
 A.wizDiscard=()=>{UI.wiz=null;UI.modal=null;UI.panel.open=false;UI.view='home';history.replaceState(null,'','#home');window.scrollTo(0,0);toast('Zakládání klienta zrušeno');};
 A.dupClient=()=>{const c=cur();const n=Store.duplicate(c);S.clients.unshift(n);S.activeId=n.id;S.changes=(S.changes||0)+1;UI.dd=false;UI.view='prehled';persist();toast('Klient zduplikován');};
 A.delClient=()=>{UI.modal={type:'delete',id:cur().id};};
+A.rowMenu=t=>{UI.rowMenu=UI.rowMenu===t.dataset.id?null:t.dataset.id;};
 A.delRow=t=>{UI.dd=false;UI.modal={type:'delete',id:t.dataset.id};};
 A.dupRow=t=>{const c=S.clients.find(x=>x.id===t.dataset.id);if(!c)return;const n=Store.duplicate(c);S.clients.unshift(n);S.changes=(S.changes||0)+1;persist();toast('Klient zduplikován: '+n.name);};
 A.editClient=t=>{UI.dd=false;UI.modal={type:'edit',id:(t&&t.dataset&&t.dataset.id)||cur().id};};
@@ -877,6 +919,7 @@ document.addEventListener('click',e=>{
   const t=e.target.closest('[data-act]');
   if(!t){
     if(UI.dd&&!e.target.closest('#dd')){UI.dd=false;render();}
+    if(UI.rowMenu&&!e.target.closest('.rm')){UI.rowMenu=null;render();}
     const hl=e.target.closest('a[href^="#"]');if(hl){e.preventDefault();const v=hl.getAttribute('href').slice(1);if(VIEWS.includes(v)){go(v);render();}}
     return;
   }
@@ -884,12 +927,13 @@ document.addEventListener('click',e=>{
   const fn=A[t.dataset.act];if(!fn)return;
   e.preventDefault();
   if(t.dataset.act==='pickFile'){fn(t);return;}
+  if(t.dataset.act!=='rowMenu')UI.rowMenu=null;
   fn(t);render();
   if(t.dataset.act==='dd'&&UI.dd){const q=$('#ddq');if(q)q.focus();}
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    if(UI.modal){UI.modal=null;UI.importRes=null;}else if(UI.dd)UI.dd=false;else if(UI.panel.open)UI.panel.open=false;else if(UI.present)UI.present=false;else return;
+    if(UI.modal){UI.modal=null;UI.importRes=null;}else if(UI.rowMenu)UI.rowMenu=null;else if(UI.dd)UI.dd=false;else if(UI.panel.open)UI.panel.open=false;else if(UI.present)UI.present=false;else return;
     render();return;
   }
   if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.vcard[data-act]')){e.preventDefault();A.editVar(e.target);render();}

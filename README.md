@@ -54,7 +54,9 @@ Demo je zjednodušený, neověřený model a kontrolní hodnoty v testech (tests
 
 ## Správa klientů
 
-V seznamu na úvodní obrazovce i v rozbalovátku klientů jde klienta **upravit** (jméno, poznámka; kód `K-XXXX` se nemění), **duplikovat** a **smazat**. Smazání vyžaduje potvrzení (s nabídkou exportu) a po něm je 8 vteřin tlačítko **Vrátit zpět**. Po obnovení stránky už vrátit nejde, proto zálohujte.
+Na úvodní obrazovce je celkový přehled: počet klientů, objem nových a stávajících hypoték, zvažované byty, možná úspora na dani, kalendář fixací (12 měsíců), rozložení rizik (LTV, splátky z příjmu), citlivost na sazby (+1 p.b.) a rozdíl v dani z pronájmu. Čísla se počítají z nejvýhodnější varianty každého klienta.
+
+V seznamu klientů (menu ⋮ u řádku) a v rozbalovátku jde klienta **upravit** (jméno, poznámka; kód `K-XXXX` se nemění), **duplikovat** a **smazat**. Smazání vyžaduje potvrzení (s nabídkou exportu) a po něm je 8 vteřin tlačítko **Vrátit zpět**. Po obnovení stránky už vrátit nejde, proto zálohujte.
 
 ## Označení pro hlášení problémů
 
