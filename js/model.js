@@ -24,18 +24,19 @@ const pl=(n,a,b,c)=>n===1?a:(n>=2&&n<=4)?b:c;
 function rel(ts){const m=Math.round((Date.now()-ts)/60000);if(m<2)return 'upraveno právě teď';if(m<60)return 'upraveno před '+m+' min';const h=Math.round(m/60);if(h<24)return 'upraveno před '+h+' h';const d=Math.round(h/24);return d===1?'upraveno včera':'upraveno před '+d+' dny';}
 function mkVar(name,price,o){o=o||{};const r=o.reno||[],op=o.ops||[];return {id:uid(),name,price:price||0,acq:o.acq||0,reno:RENO.map((l,i)=>L(l,r[i])),savReno:o.savReno||0,savMort:o.savMort||0,rate:o.rate||4.79,years:o.years||30,insSold:o.insSold||0,insKept:o.insKept||0,ops:VOPS.map((l,i)=>L(l,op[i]))};}
 function mkFlat(o){o=o||{};return {est:o.est||0,purchase:o.purchase||0,ops:o.ops||[L('Fond oprav a správa'),L('Energie'),L('Pojištění nemovitosti')],mort:Object.assign({balance:0,rate:0,months:0,ins:0},o.mort),fix:Object.assign({months:0,rate:0},o.fix),sale:Object.assign({comm:3,costs:0,exempt:true},o.sale),rent:Object.assign({rent:0,vac:8,repairs:0,tax:'A',owner:0},o.rent)};}
+const STAGES=[['zjisteni','Zjištění situace'],['nabidka','Nabídka'],['schvaleno','Schváleno'],['banka','Podáno u banky'],['vyrizeno','Vyřízeno']];
 function mkClient(o){o=o||{};return {id:uid(),name:o.name||'Nový klient',note:o.note||'',savings:o.savings||0,
  incomes:o.incomes||[L('Příjem 1'),L('Příjem 2')],
  expenses:o.expenses||['Jídlo a drogerie','Doprava','Telefon a internet','Děti','Oblečení','Volný čas','Ostatní'].map(l=>L(l)),
  annual:o.annual||['Pojištění auta','Dovolená','Dárky a svátky','Servis auta','Ostatní'].map(l=>L(l)),
  t:Object.assign({flat:false,mort:false,fix:false,sell:false,rent:false,buy:true,annual:true},o.t),
- flat:mkFlat(o.flat),useRefix:o.useRefix!==false,variants:o.variants||[],sample:!!o.sample,archived:!!o.archived,updated:o.updated||Date.now()};}
+ flat:mkFlat(o.flat),useRefix:o.useRefix!==false,variants:o.variants||[],sample:!!o.sample,archived:!!o.archived,stage:STAGES.some(x=>x[0]===o.stage)?o.stage:'zjisteni',lastContact:/^\d{4}-\d{2}-\d{2}$/.test(o.lastContact||'')?o.lastContact:'',updated:o.updated||Date.now()};}
 function normalize(c){const n=mkClient(Object.assign({},c,{variants:(Array.isArray(c.variants)?c.variants:[]).map(v=>Object.assign(mkVar(v.name||'Varianta',+v.price||0),v,{id:uid()}))}));n.id=uid();n.sample=false;n.updated=Date.now();return n;}
-function samples(){const now=Date.now(),H=3600000,D=86400000;
+function samples(){const now=Date.now(),H=3600000,D=86400000,iso=n=>new Date(now-n*D).toISOString().slice(0,10);
  const E=a=>['Jídlo a drogerie','Doprava','Telefon a internet','Děti','Oblečení','Volný čas','Ostatní'].map((l,i)=>L(l,a[i])),A=a=>['Pojištění auta','Dovolená','Dárky a svátky','Servis auta','Ostatní'].map((l,i)=>L(l,a[i]));
  return [
  /* 1) stávající byt si nechají a pronajímají, vybírají ze dvou nových bytů */
- mkClient({sample:true,updated:now-3*H,name:'Kučerovi',note:'Bydlí v bytě 3+kk na Praze 4, narodilo se druhé dítě. Starý byt si chtějí nechat a pronajímat, vybírají mezi dvěma většími byty.',savings:1450000,
+ mkClient({sample:true,stage:'nabidka',lastContact:iso(3),updated:now-3*H,name:'Kučerovi',note:'Bydlí v bytě 3+kk na Praze 4, narodilo se druhé dítě. Starý byt si chtějí nechat a pronajímat, vybírají mezi dvěma většími byty.',savings:1450000,
   incomes:[L('Mzda – Tomáš',78000),L('Mzda – Veronika (rodičovská + částečný úvazek)',61000)],
   expenses:E([17000,6500,1800,7500,3000,5000,3500]),annual:A([16000,85000,20000,14000,12000]),
   t:{flat:true,mort:true,fix:false,rent:true,buy:true,annual:true},
@@ -43,7 +44,7 @@ function samples(){const now=Date.now(),H=3600000,D=86400000;
   variants:[mkVar('Praha 6 – Dejvice, 4+kk 98 m²',9800000,{acq:120000,reno:[140000,150000,60000,30000,0,0,0,0,40000,20000],savReno:300000,savMort:1150000,rate:4.79,years:30,insSold:900,insKept:1250,ops:[5200,3600,420,150]}),
    mkVar('Praha 9 – Prosek, novostavba 3+kk',8450000,{acq:60000,reno:[0,0,0,20000,0,0,0,0,50000,20000],savReno:150000,savMort:1250000,rate:4.69,years:30,insSold:780,insKept:1050,ops:[4300,3000,350,0]})]}),
  /* 2) stávající byt prodají a z výtěžku financují nový, vybírají ze tří */
- mkClient({sample:true,updated:now-2*D,name:'Dostálovi',note:'Prodávají byt 3+1 na Praze 10 a z výtěžku chtějí koupit větší bydlení. Po prohlídkách zůstaly tři kandidáti.',savings:650000,
+ mkClient({sample:true,stage:'schvaleno',lastContact:iso(21),updated:now-2*D,name:'Dostálovi',note:'Prodávají byt 3+1 na Praze 10 a z výtěžku chtějí koupit větší bydlení. Po prohlídkách zůstaly tři kandidáti.',savings:650000,
   incomes:[L('Mzda – Ondřej',71000),L('Mzda – Martina',54000)],
   expenses:E([15500,5500,1600,6000,2500,4500,3500]),annual:A([13000,70000,15000,11000,9000]),
   t:{flat:true,mort:true,fix:false,sell:true,buy:true,annual:true},
@@ -52,7 +53,7 @@ function samples(){const now=Date.now(),H=3600000,D=86400000;
    mkVar('Praha 3 – Žižkov, 3+kk po rekonstrukci',9150000,{acq:110000,reno:[0,0,0,20000,0,0,0,0,0,10000],savReno:100000,savMort:0,rate:4.79,years:30,insSold:600,ops:[4200,3200,360,120]}),
    mkVar('Říčany – řadový dům 5+kk',11200000,{acq:150000,reno:[0,0,0,50000,0,0,0,0,40000,30000],savReno:250000,savMort:0,rate:4.69,years:30,insSold:850,ops:[0,5400,700,200]})]}),
  /* 3) byt si nechají a pronajímají, hypotéku refinancují za 7 měsíců */
- mkClient({sample:true,updated:now-6*D,name:'Marešovi',note:'Byt 2+kk v Libni si nechají a pronajmou. Fixace hypotéky jim končí za 7 měsíců a zajímá je, o kolik se zvedne splátka. Plánují koupit větší byt.',savings:1800000,
+ mkClient({sample:true,stage:'zjisteni',lastContact:iso(48),updated:now-6*D,name:'Marešovi',note:'Byt 2+kk v Libni si nechají a pronajmou. Fixace hypotéky jim končí za 7 měsíců a zajímá je, o kolik se zvedne splátka. Plánují koupit větší byt.',savings:1800000,
   incomes:[L('Mzda – Jan',84000),L('Mzda – Petra',67000)],
   expenses:E([16000,5500,1700,4000,3000,5000,3500]),annual:A([14000,75000,18000,12000,10000]),
   t:{flat:true,mort:true,fix:true,rent:true,buy:true,annual:true},useRefix:false,
@@ -60,7 +61,7 @@ function samples(){const now=Date.now(),H=3600000,D=86400000;
   variants:[mkVar('Praha 8 – Kobylisy, 3+kk 78 m²',8700000,{acq:90000,reno:[100000,120000,40000,25000,0,0,0,0,30000,15000],savReno:250000,savMort:1450000,rate:4.79,years:30,insSold:720,insKept:980,ops:[4100,3000,380,130]}),
    mkVar('Praha 7 – Holešovice, 4+kk 85 m²',10300000,{acq:110000,reno:[0,0,0,30000,0,0,0,0,0,20000],savReno:100000,savMort:1650000,rate:4.79,years:30,insSold:860,insKept:1150,ops:[4900,3300,420,150]})]}),
  ];}
-const SEED_V=3;
+const SEED_V=4;
 function seed(){const c=samples();return {clients:c,activeId:c[0].id,lastBackup:Date.now()-9*86400000,seedV:SEED_V};}
 function validate(text){let d;try{d=JSON.parse(text);}catch(e){return {error:'Soubor není platný JSON.',details:['Soubor je poškozený nebo nejde o zálohu z Kalkulačky bydlení.','Technický detail: '+e.message]};}
  const list=Array.isArray(d)?d:(d&&Array.isArray(d.clients))?d.clients:(d&&typeof d==='object'&&'name' in d)?[d]:null;
@@ -101,5 +102,5 @@ const C_PMT='#0072B2',C_INS='repeating-linear-gradient(45deg,#E69F00 0 5px,#f2c6
 const C_SAV='#009E73',C_PRO='repeating-linear-gradient(45deg,#E69F00 0 5px,#f2c66b 5px 9px)',C_MOR='#0072B2';
 
 
-return {RENO,VOPS,KEY,uid,L,sum,getPath,ann,balAfter,kc,kcd,pct,tis,mil,fmtIn,NF,NF2,parseNum,pl,rel,mkVar,mkFlat,mkClient,normalize,samples,seed,SEED_V,validate,compute,C_PMT,C_INS,C_OPS,C_OLD,C_SAV,C_PRO,C_MOR};
+return {STAGES,RENO,VOPS,KEY,uid,L,sum,getPath,ann,balAfter,kc,kcd,pct,tis,mil,fmtIn,NF,NF2,parseNum,pl,rel,mkVar,mkFlat,mkClient,normalize,samples,seed,SEED_V,validate,compute,C_PMT,C_INS,C_OPS,C_OLD,C_SAV,C_PRO,C_MOR};
 });
